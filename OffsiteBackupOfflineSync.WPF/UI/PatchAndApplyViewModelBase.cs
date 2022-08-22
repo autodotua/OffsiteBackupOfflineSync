@@ -1,6 +1,7 @@
 ﻿using FzLib;
 using System.ComponentModel;
 using OffsiteBackupOfflineSync.Model;
+using System.Collections.ObjectModel;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -10,7 +11,7 @@ namespace OffsiteBackupOfflineSync.UI
         private double progress;
         private double progressMax;
 
-        private List<SyncFile> updateFiles;
+        private ObservableCollection<SyncFile> updateFiles;
         public event PropertyChangedEventHandler PropertyChanged;
 
         public string Message
@@ -28,11 +29,11 @@ namespace OffsiteBackupOfflineSync.UI
             get => progressMax;
             set => this.SetValueAndNotify(ref progressMax, value, nameof(ProgressMax));
         }
-        public List<SyncFile> UpdateFiles
+        public ObservableCollection<SyncFile> UpdateFiles
         {
             get => updateFiles;
             set => this.SetValueAndNotify(ref updateFiles, value, nameof(UpdateFiles));
         }
     }
-
 }
+

@@ -10,6 +10,7 @@ using System.Diagnostics;
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
+using System.Collections.ObjectModel;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -18,7 +19,7 @@ namespace OffsiteBackupOfflineSync.UI
     /// </summary>
     public partial class Step3 : UserControl
     {
-        Step3Utility u = new Step3Utility();
+        private readonly Step3Utility u = new Step3Utility();
         public Step3()
         {
             DataContext = ViewModel;
@@ -48,7 +49,7 @@ namespace OffsiteBackupOfflineSync.UI
                 await Task.Run(() =>
                 {
                     u.Analyze(ViewModel.PatchDir);
-                    ViewModel.UpdateFiles = u.UpdateFiles;
+                    ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles); ;
                 });
                 btnRebuild.IsEnabled = true;
             }
@@ -123,8 +124,8 @@ namespace OffsiteBackupOfflineSync.UI
 
     public class Step3ViewModel : PatchAndApplyViewModelBase
     {
-        private string offsiteDir = @"C:\Users\autod\Desktop\test\remote2";
-        private string patchDir = @"C:\Users\autod\Desktop\test\patch";
+        private string offsiteDir;
+        private string patchDir;
 
         public string OffsiteDir
         {

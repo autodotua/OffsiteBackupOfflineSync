@@ -8,6 +8,8 @@ using OffsiteBackupOfflineSync;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Utility;
+using System.Collections.ObjectModel;
+using OffsiteBackupOfflineSync.Model;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -17,7 +19,7 @@ namespace OffsiteBackupOfflineSync.UI
     /// </summary>
     public partial class Step2 : UserControl
     {
-        Step2Utility u = new Step2Utility();
+        private readonly Step2Utility u = new Step2Utility();
         public Step2()
         {
             DataContext = ViewModel;
@@ -95,11 +97,11 @@ namespace OffsiteBackupOfflineSync.UI
             try
             {
                 btnAnalyze.IsEnabled = btnRebuild.IsEnabled = false;
-                ViewModel.Message = "正在重建分析";
+                ViewModel.Message = "正在查找更改";
                 await Task.Run(() =>
                 {
                     u.Analyze(ViewModel.LocalDir, ViewModel.OffsiteSnapshot);
-                    ViewModel.UpdateFiles = u.UpdateFiles;
+                    ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles) ;
                 });
                 btnRebuild.IsEnabled = true;
             }
@@ -121,8 +123,8 @@ namespace OffsiteBackupOfflineSync.UI
     }
     public class Step2ViewModel : PatchAndApplyViewModelBase
     {
-        private string localDir = @"C:\Users\autod\Desktop\test\local";
-        private string offsiteSnapshot = @"C:\Users\autod\Desktop\test\0821.obos1";
+        private string localDir;
+        private string offsiteSnapshot;
         public string LocalDir
         {
             get => localDir;

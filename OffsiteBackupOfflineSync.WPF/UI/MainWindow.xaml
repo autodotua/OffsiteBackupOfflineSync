@@ -9,34 +9,52 @@
     Title="异地备份离线同步"
     Width="1200"
     Height="800"
-    ui:TitleBar.Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+    ui:TitleBar.Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+    ui:TitleBar.InactiveBackground="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
     ui:TitleBar.ExtendViewIntoTitleBar="False"
     ui:TitleBar.IsIconVisible="True"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
     WindowState="Maximized"
     mc:Ignorable="d">
+    <ui:NavigationView
+        Header="{Binding NavigationViewHeader}"
+        IsBackButtonVisible="Collapsed"
+        PaneDisplayMode="Top"
+        SelectionChanged="NavigationView_SelectionChanged">
+        <ui:NavigationView.MenuItems>
+            <ui:NavigationViewItem
+                Content="第一步：异地快照"
+                IsSelected="True" />
+            <ui:NavigationViewItem Content="第二步：本地制作补丁" />
+            <ui:NavigationViewItem Content="第三步：异地更新" />
+        </ui:NavigationView.MenuItems>
+        <!--<TabControl x:Name="tab" Margin="0,-8,0,0">
+            <TabControl.ItemContainerStyle>
+                <Style TargetType="{x:Type TabItem}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Style>
+            </TabControl.ItemContainerStyle>
+            <TabItem Header=" 第一步：异地快照 ">
+                <local:Step1 x:Name="step1" />
+            </TabItem>
+            <TabItem Header=" 第二步：本地制作补丁 ">
+                <local:Step2 x:Name="step2" />
+            </TabItem>
+            <TabItem Header=" 第三步：异地更新 ">
 
-
-    <TabControl Grid.Row="2">
-        <TabItem Header=" 第一步：异地快照 ">
-            <local:Step1 x:Name="step1" />
-        </TabItem>
-        <TabItem Header=" 第二步：本地制作补丁 ">
-            <local:Step2 x:Name="step2" />
-        </TabItem>
-        <TabItem Header=" 第三步：异地更新 ">
-
-            <local:Step3 x:Name="step3" />
-        </TabItem>
-        <TabItem Header=" 关于 ">
-            <ui:SimpleStackPanel
-                Margin="8"
-                Orientation="Vertical"
-                Spacing="8">
-                <TextBlock Text="autodotua" />
-                <ui:HyperlinkButton NavigateUri="https://github.com/autodotua/OffsiteBackupOfflineSync">Github</ui:HyperlinkButton>
-            </ui:SimpleStackPanel>
-        </TabItem>
-    </TabControl>
+                <local:Step3 x:Name="step3" />
+            </TabItem>
+            <TabItem Header=" 关于 ">
+                <ui:SimpleStackPanel
+                    Margin="8"
+                    Orientation="Vertical"
+                    Spacing="8">
+                    <TextBlock Text="autodotua" />
+                    <ui:HyperlinkButton NavigateUri="https://github.com/autodotua/OffsiteBackupOfflineSync">Github</ui:HyperlinkButton>
+                </ui:SimpleStackPanel>
+            </TabItem>
+        </TabControl>-->
+        <ui:Frame x:Name="frame" />
+    </ui:NavigationView>
 </Window>

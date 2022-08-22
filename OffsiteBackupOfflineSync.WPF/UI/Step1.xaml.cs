@@ -22,53 +22,43 @@ namespace OffsiteBackupOfflineSync.UI
     /// </summary>
     public partial class Step1 : UserControl
     {
-        Step1Utility u=new Step1Utility();
+       private readonly Step1Utility u=new Step1Utility();
         public Step1()
         {
             DataContext = ViewModel;
             InitializeComponent();
+            ViewModel.PropertyChanged += (s, e) =>
+            {
+                if(e.PropertyName==nameof(ViewModel.Dirs))
+                {
+                    lst.SelectAll();
+                }
+            };
 
         }
         public Step1ViewModel ViewModel { get; } = new Step1ViewModel();
 
-        private async void AddDirButton_Click(object sender, RoutedEventArgs e)
+        private void BrowseDirButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new FileFilterCollection().CreateOpenFileDialog();
-            dialog.Multiselect = true;
-            dialog.IsFolderPicker = true;
-            if (dialog.ShowDialog(this.GetWindow()) == CommonFileDialogResult.Ok)
+            string path = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
+            if (path != null)
             {
-                foreach (var dir in dialog.FileNames)
-                {
-                    if (!ViewModel.Dirs.Contains(dir))
-                    {
-                        if (Path.GetDirectoryName(dir) == null)
-                        {
-                            await CommonDialog.ShowErrorDialogAsync("不可选择磁盘根目录");
-                            return;
-                        }
-                        ViewModel.Dirs.Add(dir);
-                    }
-                }
-            }
-        }
-
-        private void RemoveDirButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (ViewModel.SelectedDir != null && ViewModel.Dirs.Contains(ViewModel.SelectedDir))
-            {
-                ViewModel.Dirs.Remove(ViewModel.SelectedDir);
+                ViewModel.Dir = path;
             }
         }
 
         private async void ExportButton_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewModel.Dirs.Count == 0)
+            var dirs = lst.SelectedItems.Cast<string>().ToList();
+            if (dirs.Count == 0)
             {
-                await CommonDialog.ShowErrorDialogAsync("目录为空");
+                await CommonDialog.ShowErrorDialogAsync("选择的目录为空");
                 return;
             }
-            string path = new FileFilterCollection().Add("异地备份快照", "obos1").CreateSaveFileDialog().GetFilePath();
+            string path = new FileFilterCollection().Add("异地备份快照", "obos1")
+                .CreateSaveFileDialog()
+                .SetDefault($"{ Environment.MachineName} - {Path.GetFileName(ViewModel.Dir)}")
+                .GetFilePath();
             if (path != null)
             {
                
@@ -78,7 +68,7 @@ namespace OffsiteBackupOfflineSync.UI
                 {
                     await Task.Run(() =>
                     {
-                        u.Enumerate(ViewModel.Dirs, path);
+                        u.Enumerate(dirs, path);
                     });
                 }
                 catch (Exception ex)
@@ -92,32 +82,49 @@ namespace OffsiteBackupOfflineSync.UI
                 }
             }
         }
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            lst.SelectAll();
+        }
+
+        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
+        {
+            lst.UnselectAll();
+        }
     }
 
 
     public class Step1ViewModel : INotifyPropertyChanged
     {
-        private ObservableCollection<string> dirs = new ObservableCollection<string>();
-        public ObservableCollection<string> Dirs
+        private string dir;
+        private List<string> dirs = new List<string>();
+        private bool working;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public string Dir
+        {
+            get => dir;
+            set
+            {
+                this.SetValueAndNotify(ref dir, value, nameof(Dir));
+                if (Directory.Exists(value))
+                {
+                    Dirs = Directory.EnumerateDirectories(value).ToList();
+                }
+            }
+        }
+
+        public List<string> Dirs
         {
             get => dirs;
             set => this.SetValueAndNotify(ref dirs, value, nameof(Dirs));
         }
-        private string selectedDir;
-        public string SelectedDir
-        {
-            get => selectedDir;
-            set => this.SetValueAndNotify(ref selectedDir, value, nameof(SelectedDir));
-        }
-        private bool working;
         public bool Working
         {
             get => working;
             set => this.SetValueAndNotify(ref working, value, nameof(Working));
         }
-
-
-        public event PropertyChangedEventHandler PropertyChanged;
     }
 
 }
