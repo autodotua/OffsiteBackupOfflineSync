@@ -34,6 +34,10 @@ namespace OffsiteBackupOfflineSync.UI
                     lst.SelectAll();
                 }
             };
+            u.MessageReceived += (s, e) =>
+            {
+                ViewModel.Message = e.Message;
+            };
 
         }
         public Step1ViewModel ViewModel { get; } = new Step1ViewModel();
@@ -66,6 +70,7 @@ namespace OffsiteBackupOfflineSync.UI
                 btnExport.IsEnabled = false;
                 try
                 {
+                    ViewModel.Message = "正在查找文件";
                     await Task.Run(() =>
                     {
                         u.Enumerate(dirs, path);
@@ -79,6 +84,7 @@ namespace OffsiteBackupOfflineSync.UI
                 {
                     ViewModel.Working = false;
                     btnExport.IsEnabled = true;
+                    ViewModel.Message = "就绪";
                 }
             }
         }
@@ -98,8 +104,8 @@ namespace OffsiteBackupOfflineSync.UI
     {
         private string dir;
         private List<string> dirs = new List<string>();
+        private string message = "就绪";
         private bool working;
-
         public event PropertyChangedEventHandler PropertyChanged;
 
         public string Dir
@@ -110,11 +116,14 @@ namespace OffsiteBackupOfflineSync.UI
                 this.SetValueAndNotify(ref dir, value, nameof(Dir));
                 if (Directory.Exists(value))
                 {
-                    Dirs = Directory.EnumerateDirectories(value).ToList();
+                    Dirs = Directory.EnumerateDirectories(value)
+                        .Where(p=>!p.EndsWith("System Volume Information"))
+                        .Where(p=>!p.Contains('$'))
+                        .ToList();
                 }
                 else
                 {
-                    Dirs=new List<string>();    
+                    Dirs = new List<string>();
                 }
             }
         }
@@ -123,6 +132,12 @@ namespace OffsiteBackupOfflineSync.UI
         {
             get => dirs;
             set => this.SetValueAndNotify(ref dirs, value, nameof(Dirs));
+        }
+
+        public string Message
+        {
+            get => message;
+            set => this.SetValueAndNotify(ref message, value, nameof(Message));
         }
         public bool Working
         {

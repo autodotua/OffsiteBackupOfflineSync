@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
+using System.Collections.Concurrent;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
@@ -7,14 +8,16 @@ namespace OffsiteBackupOfflineSync.Utility
     {
         public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
         private string localDir;
-
+        private volatile int index = 0;
         public void Analyze(string localDir, string offsiteSnapshotFile)
         {
             this.localDir = localDir;
             UpdateFiles.Clear();
+            index = 0;
+            ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>(); //临时的多线程需要更新文件列表
             Step1Model offsiteFiles = JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(offsiteSnapshotFile));
-            Dictionary<string, SyncFile> path2file = offsiteFiles.Files.ToDictionary(p => p.Path);
-            HashSet<string> localFiles = new HashSet<string>();
+            Dictionary<string, SyncFile> path2file = offsiteFiles.Files.ToDictionary(p => p.Path); //从路径寻找本地文件的字典
+            ConcurrentDictionary<string, byte> localFiles = new ConcurrentDictionary<string, byte>(); //用于之后寻找差异文件的哈希表
             foreach (var dir in new DirectoryInfo(localDir).EnumerateDirectories())
             {
                 if (!offsiteFiles.TopDirectories.Any(p => p.Name == dir.Name))
@@ -22,17 +25,20 @@ namespace OffsiteBackupOfflineSync.Utility
                     continue;
                 }
 
-                foreach (var file in dir.EnumerateFiles("*", SearchOption.AllDirectories))
+                InvokeMessageReceivedEvent($"正在查找 {dir}");
+                var localFileList = dir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
+                Parallel.ForEach(localFileList, file =>
                 {
                     string relativePath = Path.GetRelativePath(localDir, file.FullName);
-                    localFiles.Add(relativePath);
+                    InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
+                    localFiles.TryAdd(relativePath, 0);
                     if (path2file.ContainsKey(relativePath))
                     {
                         var offsiteFile = path2file[relativePath];
                         if ((offsiteFile.LastWriteTime - file.LastWriteTime).Duration().TotalSeconds < 1
                         && offsiteFile.Length == file.Length)//文件没有发生改动
                         {
-                            continue;
+                            return;
                         }
 
                         //文件发生改变
@@ -48,7 +54,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         {
                             newFile.Message = "异地文件时间晚于本地文件时间";
                         }
-                        UpdateFiles.Add(newFile);
+                        tempUpdateFiles.Add(newFile);
                     }
                     else //新增文件
                     {
@@ -60,16 +66,18 @@ namespace OffsiteBackupOfflineSync.Utility
                             LastWriteTime = file.LastWriteTime,
                             UpdateType = FileUpdateType.Add
                         };
-                        UpdateFiles.Add(newFile);
+                        tempUpdateFiles.Add(newFile);
                     }
-                }
+                });
 
 
             }
-
+            UpdateFiles.AddRange(tempUpdateFiles);
+            index = 0;
             foreach (var file in offsiteFiles.Files)
             {
-                if (!localFiles.Contains(file.Path))
+                InvokeMessageReceivedEvent($"正在查找删除的文件：{++index} / {offsiteFiles.Files.Count}");
+                if (!localFiles.ContainsKey(file.Path))
                 {
                     file.UpdateType = FileUpdateType.Delete;
                     UpdateFiles.Add(file);
@@ -85,7 +93,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 Directory.CreateDirectory(outputDir);
             }
             var files = UpdateFiles.Where(p => p.Checked).ToList();
-            long totalLength = files.Where(p=>p.UpdateType!=FileUpdateType.Delete).Sum(p => p.Length);
+            long totalLength = files.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
             foreach (var file in files)
             {
@@ -98,13 +106,13 @@ namespace OffsiteBackupOfflineSync.Utility
                     InvokeProgressReceivedEvent(length += file.Length, totalLength);
                 }
                 file.Complete = true;
-                if(stopping)
+                if (stopping)
                 {
                     throw new OperationCanceledException();
                 }
             }
 
-            var json = JsonConvert.SerializeObject(files,Formatting.Indented);
+            var json = JsonConvert.SerializeObject(files, Formatting.Indented);
             File.WriteAllText(Path.Combine(outputDir, "file.obos2"), json);
         }
     }

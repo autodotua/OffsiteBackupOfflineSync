@@ -78,14 +78,24 @@
         </GroupBox>
         <Grid Grid.Row="99">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ProgressBar IsIndeterminate="{Binding Working}" />
+            <TextBlock
+                Width="360"
+                VerticalAlignment="Center"
+                Text="{Binding Message}"
+                TextTrimming="CharacterEllipsis"
+                ToolTip="{Binding Message}" />
+            <ProgressBar
+                Grid.Column="2"
+                IsIndeterminate="{Binding Working}" />
             <Button
                 x:Name="btnExport"
-                Grid.Column="2"
+                Grid.Column="4"
                 Click="ExportButton_Click"
                 Content="导出" />
         </Grid>

@@ -4,6 +4,7 @@ namespace OffsiteBackupOfflineSync.Model
 {
     public enum FileUpdateType
     {
+        None,
         [Description("新增")]
         Add,
         [Description("修改")]

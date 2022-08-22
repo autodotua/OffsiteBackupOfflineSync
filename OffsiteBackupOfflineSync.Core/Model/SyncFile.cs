@@ -9,8 +9,20 @@ using Newtonsoft.Json;
 
 namespace OffsiteBackupOfflineSync.Model
 {
-    public class SyncFile:INotifyPropertyChanged
+    public class SyncFile : INotifyPropertyChanged
     {
+        public SyncFile()
+        {
+
+        }
+        public SyncFile(FileInfo file, string rootDir)
+        {
+
+            Name = file.Name;
+            Path = System.IO.Path.GetRelativePath(System.IO.Path.GetDirectoryName(rootDir), file.FullName);
+            LastWriteTime = file.LastWriteTime;
+            Length = file.Length;
+        }
         private bool complete;
 
         private string message;
