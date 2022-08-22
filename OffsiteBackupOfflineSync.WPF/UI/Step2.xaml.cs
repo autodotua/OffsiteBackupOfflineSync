@@ -59,6 +59,10 @@ namespace OffsiteBackupOfflineSync.UI
 
         private async void ExportButton_Click(object sender, RoutedEventArgs e)
         {
+            if (ViewModel.UpdateFiles.Count == 0)
+            {
+                await CommonDialog.ShowErrorDialogAsync("本地和异地没有差异");
+            }
             var outputDir = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
             if (outputDir != null)
             {
@@ -66,7 +70,7 @@ namespace OffsiteBackupOfflineSync.UI
                 {
                     stkConfig.IsEnabled = false;
                     btnStop.IsEnabled = true;
-                    btnRebuild.IsEnabled = false;
+                    btnPatch.IsEnabled = false;
                     ViewModel.Progress = 0;
                     await Task.Run(() =>
                     {
@@ -84,7 +88,7 @@ namespace OffsiteBackupOfflineSync.UI
                 finally
                 {
                     stkConfig.IsEnabled = true;
-                    btnRebuild.IsEnabled = true;
+                    btnPatch.IsEnabled = true;
                     btnStop.IsEnabled = false;
                     ViewModel.Message = "就绪";
                     ViewModel.Progress = ViewModel.ProgressMax;
@@ -94,20 +98,47 @@ namespace OffsiteBackupOfflineSync.UI
 
         private async void SearchChangeButton_Click(object sender, RoutedEventArgs e)
         {
+            if(string.IsNullOrEmpty(ViewModel.OffsiteSnapshot))
+            {
+                await CommonDialog.ShowErrorDialogAsync("快照文件为空");
+                return;
+            }
+            if(!File.Exists(ViewModel.OffsiteSnapshot))
+            {
+                await CommonDialog.ShowErrorDialogAsync("快照文件不存在");
+                return;
+            }
+            if(string.IsNullOrEmpty(ViewModel.LocalDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("本地目录为空");
+                return;
+            }
+            if(!Directory.Exists(ViewModel.LocalDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("本地目录不存在");
+                return;
+            }
             try
             {
-                btnAnalyze.IsEnabled = btnRebuild.IsEnabled = false;
+                btnAnalyze.IsEnabled = btnPatch.IsEnabled = false;
                 ViewModel.Message = "正在查找更改";
                 await Task.Run(() =>
                 {
                     u.Analyze(ViewModel.LocalDir, ViewModel.OffsiteSnapshot);
-                    ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles) ;
+                    ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles);
                 });
-                btnRebuild.IsEnabled = true;
+                if (ViewModel.UpdateFiles.Count == 0)
+                {
+                    await CommonDialog.ShowOkDialogAsync("查找完成", "本地和异地没有差异");
+                }
+                else
+                {
+                    btnPatch.IsEnabled = true;
+                }
             }
             catch (Exception ex)
             {
-                await CommonDialog.ShowErrorDialogAsync(ex, "解析失败");
+                await CommonDialog.ShowErrorDialogAsync(ex, "查找失败");
             }
             finally
             {

@@ -35,7 +35,7 @@
                     Text="目录：" />
                 <TextBox
                     Grid.Column="2"
-                    Text="{Binding Dir}" />
+                    Text="{Binding Dir, UpdateSourceTrigger=PropertyChanged}" />
                 <Button
                     Grid.Column="4"
                     Click="BrowseDirButton_Click"
@@ -63,10 +63,14 @@
                     HorizontalAlignment="Right"
                     Orientation="Horizontal"
                     Spacing="8">
-                    <Button Click="SelectAllButton_Click">
+                    <Button
+                        Click="SelectAllButton_Click"
+                        IsEnabled="{Binding Dirs, Converter={StaticResource CountMoreThanZeroConverter}}">
                         <ui:SymbolIcon Symbol="SelectAll" />
                     </Button>
-                    <Button Click="SelectNoneButton_Click">
+                    <Button
+                        Click="SelectNoneButton_Click"
+                        IsEnabled="{Binding Dirs, Converter={StaticResource CountMoreThanZeroConverter}}">
                         <ui:SymbolIcon Symbol="ClearSelection" />
                     </Button>
                 </ui:SimpleStackPanel>

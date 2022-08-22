@@ -42,10 +42,30 @@ namespace OffsiteBackupOfflineSync.UI
 
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
+            if (string.IsNullOrEmpty(ViewModel.OffsiteDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("异地目录为空");
+                return;
+            }
+            if (!Directory.Exists(ViewModel.OffsiteDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("异地目录不存在");
+                return;
+            }
+            if (string.IsNullOrEmpty(ViewModel.PatchDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("补丁目录为空");
+                return;
+            }
+            if (!Directory.Exists(ViewModel.PatchDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("补丁目录不存在");
+                return;
+            }
             try
             {
                 btnAnalyze.IsEnabled = btnRebuild.IsEnabled = false;
-                ViewModel.Message = "正在重建分析";
+                ViewModel.Message = "正在分析";
                 await Task.Run(() =>
                 {
                     u.Analyze(ViewModel.PatchDir);
@@ -55,7 +75,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             catch (Exception ex)
             {
-                await CommonDialog.ShowErrorDialogAsync(ex, "解析失败");
+                await CommonDialog.ShowErrorDialogAsync(ex, "分析失败");
             }
             finally
             {

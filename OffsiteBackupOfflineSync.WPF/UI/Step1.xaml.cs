@@ -112,6 +112,10 @@ namespace OffsiteBackupOfflineSync.UI
                 {
                     Dirs = Directory.EnumerateDirectories(value).ToList();
                 }
+                else
+                {
+                    Dirs=new List<string>();    
+                }
             }
         }
 
