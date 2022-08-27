@@ -59,9 +59,28 @@ namespace OffsiteBackupOfflineSync.UI
                 await CommonDialog.ShowErrorDialogAsync("选择的目录为空");
                 return;
             }
+            string name = $"{DateTime.Now.ToString("yyyyMMdd")}-";
+            DriveInfo[] drives=DriveInfo.GetDrives();
+            if(drives.Any(p=> ViewModel.Dir.StartsWith(p.Name)))
+            {
+                var label = drives.First(p => ViewModel.Dir.StartsWith(p.Name)).VolumeLabel;
+                if (!string.IsNullOrEmpty(label))
+                {
+                    name += label;
+                }
+                else
+                {
+                    name += ViewModel.Dir[0];
+                }
+            }
+            else
+            {
+                name += ViewModel.Dir[0];
+            }
+          
             string path = new FileFilterCollection().Add("异地备份快照", "obos1")
                 .CreateSaveFileDialog()
-                .SetDefault($"{ Environment.MachineName} - {Path.GetFileName(ViewModel.Dir)}")
+                .SetDefault(name)
                 .GetFilePath();
             if (path != null)
             {

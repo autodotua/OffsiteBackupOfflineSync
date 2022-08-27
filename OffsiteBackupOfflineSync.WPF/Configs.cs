@@ -1,5 +1,6 @@
 ﻿using FzLib.DataStorage.Serialization;
 using Newtonsoft.Json;
+using OffsiteBackupOfflineSync.Model;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,6 +13,47 @@ namespace OffsiteBackupOfflineSync
     public class Configs : IJsonSerializable
     {
         public static readonly double MaxTimeTolerance = 1;
+        private static readonly string configPath = "configs.json";
+        private static Configs instance;
+        private Configs()
+        {
+
+        }
+
+        public static Configs Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = new Configs();
+
+                    try
+                    {
+                        instance.TryLoadFromJsonFile(configPath);
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                }
+                return instance;
+            }
+        }
+
+        public string DeletedDir { get; set; } = "被删除和替换的文件备份";
+        public DeleteMode DeleteMode { get; set; } = DeleteMode.MoveToDeletedFolder;
+
+        public string Step1Dir { get; set; }
+
+        public string Step2LocalDir { get; set; }
+
+        public string Step2OffsiteSnapshot { get; set; }
+
+        public string Step3OffsiteDir { get; set; }
+
+        public string Step3PatchDir { get; set; }
+
         public void Save(string path)
         {
             string dir = Path.GetDirectoryName(path);
@@ -21,11 +63,11 @@ namespace OffsiteBackupOfflineSync
             }
             this.Save(path, new JsonSerializerSettings().SetIndented());
         }
-        public string Step1Dir { get; set; }
-        public string Step2OffsiteSnapshot { get; set; }
-        public string Step2LocalDir { get; set; }
-        public string Step3PatchDir { get; set; }
-        public string Step3OffsiteDir { get; set; }
+
+        public void Save()
+        {
+            Save(configPath);
+        }
     }
 
 }

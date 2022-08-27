@@ -28,25 +28,17 @@ namespace OffsiteBackupOfflineSync.UI
         private readonly Step1 step1 = new Step1();
         private readonly Step2 step2 = new Step2();
         private readonly Step3 step3 = new Step3();
-        private readonly Configs config = new Configs();
-        private readonly string configPath = "configs.json";
         public MainWindow()
         {
-            try
-            {
-                config.TryLoadFromJsonFile(configPath);
-            }
-            catch (Exception ex)
-            {
-
-            }
             InitializeComponent();
             DataContext = ViewModel;
+            var config = Configs.Instance;
             step1.ViewModel.Dir = config.Step1Dir;
             step2.ViewModel.OffsiteSnapshot = config.Step2OffsiteSnapshot;
             step2.ViewModel.LocalDir = config.Step2LocalDir;
             step3.ViewModel.PatchDir = config.Step3PatchDir;
             step3.ViewModel.OffsiteDir = config.Step3OffsiteDir;
+            step3.ViewModel.DeleteMode = config.DeleteMode;
             frame.Navigate(step1);
         }
 
@@ -81,13 +73,15 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void SaveConfig()
         {
+            var config = Configs.Instance;
             config.Step1Dir = step1.ViewModel.Dir;
             config.Step2OffsiteSnapshot = step2.ViewModel.OffsiteSnapshot;
             config.Step2LocalDir = step2.ViewModel.LocalDir;
             config.Step3PatchDir = step3.ViewModel.PatchDir;
             config.Step3OffsiteDir = step3.ViewModel.OffsiteDir;
+            config.DeleteMode = step3.ViewModel.DeleteMode;
 
-            config.Save(configPath);
+            config.Save();
         }
 
         private void Window_Closing(object sender, CancelEventArgs e)

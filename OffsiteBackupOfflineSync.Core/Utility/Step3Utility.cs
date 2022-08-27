@@ -1,6 +1,8 @@
 ﻿using FzLib.IO;
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
@@ -8,23 +10,58 @@ namespace OffsiteBackupOfflineSync.Utility
     {
         public List<SyncFile> UpdateFiles { get; private set; } = new List<SyncFile>();
         private string patchDir;
-        public void Analyze(string patchDir)
+        public void Analyze(string patchDir,string offsiteDir)
         {
             this.patchDir = patchDir;
             var json = File.ReadAllText(Path.Combine(patchDir, "file.obos2"));
             UpdateFiles = JsonConvert.DeserializeObject<List<SyncFile>>(json);
-            foreach (var file in UpdateFiles.Where(p => p.UpdateType != FileUpdateType.Delete))
+            foreach (var file in UpdateFiles)
             {
-                if (!File.Exists(Path.Combine(patchDir, file.TempName)))
+                string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
+                string target = Path.Combine(offsiteDir, file.Path);
+                if (!Directory.Exists(Path.GetDirectoryName(target)))
                 {
-                    file.Message = "补丁文件不存在";
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                }
+                switch (file.UpdateType)
+                {
+                    case FileUpdateType.Add:
+                        if (File.Exists(target))
+                        {
+                            file.Message = "应当为新增文件，但文件已存在";
+                        }
+                        if (!File.Exists(Path.Combine(patchDir, file.TempName)))
+                        {
+                            file.Message = "补丁文件不存在";
+                        }
+                        break;
+                    case FileUpdateType.Modify:
+                        if (!File.Exists(target))
+                        {
+                            file.Message = "应当为修改后文件，但文件不存在";
+                        }
+                        if (!File.Exists(Path.Combine(patchDir, file.TempName)))
+                        {
+                            file.Message = "补丁文件不存在";
+                        }
+                        break;
+                    case FileUpdateType.Delete:
+                        if (!File.Exists(target))
+                        {
+                            file.Message = "应当为待删除文件，但文件不存在";
+                        }
+                        break;
+                    default:
+                        throw new InvalidEnumArgumentException();
                 }
             }
+
         }
 
-        public void Update(string offsiteDir)
+        public void Update(string offsiteDir,string deletedDir, DeleteMode deleteMode)
         {
             stopping = false;
+             deletedDir = Path.Combine(offsiteDir, deletedDir, DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
             long totalLength = UpdateFiles.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
             foreach (var file in UpdateFiles)
@@ -46,7 +83,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         if (File.Exists(target))
                         {
                             file.Message = "应当为新增文件，但文件已存在";
-                            WindowsFileSystem.DeleteFileOrFolder(target, false, true);
+                            Delete(offsiteDir, target, deletedDir, deleteMode);
                         }
                         File.Copy(patch, target);
                         InvokeProgressReceivedEvent(length += file.Length, totalLength);
@@ -54,7 +91,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     case FileUpdateType.Modify:
                         if (File.Exists(target))
                         {
-                            WindowsFileSystem.DeleteFileOrFolder(target, false, true);
+                            Delete(offsiteDir, target, deletedDir, deleteMode);
                         }
                         else
                         {
@@ -66,13 +103,15 @@ namespace OffsiteBackupOfflineSync.Utility
                     case FileUpdateType.Delete:
                         if (File.Exists(target))
                         {
-                            WindowsFileSystem.DeleteFileOrFolder(target, false, true);
+                            Delete(offsiteDir, target, deletedDir, deleteMode);
                         }
                         else
                         {
                             file.Message = "应当为待删除文件，但文件不存在";
                         }
                         break;
+                    default:
+                        throw new InvalidEnumArgumentException();
                 }
                 file.Complete = true;
                 if (stopping)
@@ -80,6 +119,36 @@ namespace OffsiteBackupOfflineSync.Utility
                     throw new OperationCanceledException();
                 }
             }
+        }
+        private static void Delete(string rootDir,string filePath,string deletedFolder, DeleteMode deleteMode)
+        {
+            Debug.Assert(File.Exists(filePath));
+            if(!filePath.StartsWith(rootDir))
+            {
+                throw new ArgumentException("文件不在目录中");
+            }
+            switch (deleteMode)
+            {
+                case DeleteMode.Delete:
+                    File.Delete(filePath);
+                    break;
+                case DeleteMode.MoveToRecycleBin:
+                    WindowsFileSystem.DeleteFileOrFolder(filePath, false, true);
+                    break;
+                case DeleteMode.MoveToDeletedFolder:
+                    string relative=Path.GetRelativePath(rootDir, filePath);
+                    string target = Path.Combine(deletedFolder, relative);
+                    string dir=Path.GetDirectoryName(target);
+                    if (!Directory.Exists(dir))
+                    {
+                        Directory.CreateDirectory(dir);
+                    }
+                    File.Move(filePath, target);
+                    break;
+                default:
+                    throw new InvalidEnumArgumentException();
+            }
+
         }
     }
 

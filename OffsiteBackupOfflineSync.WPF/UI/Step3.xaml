@@ -171,6 +171,10 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock
                 Width="360"
@@ -183,16 +187,32 @@
                 VerticalAlignment="Center"
                 Maximum="{Binding ProgressMax}"
                 Value="{Binding Progress}" />
+            <TextBlock
+                Grid.Column="4"
+                VerticalAlignment="Center"
+                Text="被替换和删除的文件：" />
+            <ComboBox
+                Grid.Column="6" Width="160"
+                ItemsSource="{Binding DeleteModes}"
+                SelectedItem="{Binding DeleteMode}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Text="{Binding ., Converter={StaticResource DescriptionConverter}}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
             <Button
                 x:Name="btnStop"
-                Grid.Column="4"
+                Grid.Column="8"
                 Padding="32,4"
                 Click="StopButton_Click"
                 Content="停止"
                 IsEnabled="False" />
             <Button
                 x:Name="btnRebuild"
-                Grid.Column="6"
+                Grid.Column="10"
                 Padding="32,4"
                 Click="ExportButton_Click"
                 Content="更新"

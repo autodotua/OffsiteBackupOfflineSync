@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
 using System.Collections.ObjectModel;
+using System.Collections;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -68,7 +69,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Message = "正在分析";
                 await Task.Run(() =>
                 {
-                    u.Analyze(ViewModel.PatchDir);
+                    u.Analyze(ViewModel.PatchDir,ViewModel.OffsiteDir);
                     ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles); ;
                 });
                 btnRebuild.IsEnabled = true;
@@ -113,7 +114,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Progress = 0;
                 await Task.Run(() =>
                 {
-                    u.Update(ViewModel.OffsiteDir);
+                    u.Update(ViewModel.OffsiteDir,Configs.Instance.DeletedDir,ViewModel.DeleteMode);
                 });
             }
             catch (OperationCanceledException)
@@ -158,7 +159,14 @@ namespace OffsiteBackupOfflineSync.UI
             set => this.SetValueAndNotify(ref patchDir, value, nameof(PatchDir));
         }
 
+        private DeleteMode deleteMode = DeleteMode.MoveToDeletedFolder;
+        public DeleteMode DeleteMode
+        {
+            get => deleteMode;
+            set => this.SetValueAndNotify(ref deleteMode, value, nameof(DeleteMode));
+        }
 
+        public IEnumerable DeleteModes => Enum.GetValues<DeleteMode>();
     }
 
 }
