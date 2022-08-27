@@ -124,7 +124,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Message = "正在查找更改";
                 await Task.Run(() =>
                 {
-                    u.Analyze(ViewModel.LocalDir, ViewModel.OffsiteSnapshot);
+                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot,ViewModel.BlackList,ViewModel.BlackListUseRegex);
                     ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles);
                 });
                 if (ViewModel.UpdateFiles.Count == 0)
@@ -146,6 +146,16 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Message = "就绪";
             }
         }
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.UpdateFiles.ForEach(p => p.Checked = true);
+        }
+
+        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.UpdateFiles.ForEach(p => p.Checked = false);
+        }
+
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
             btnStop.IsEnabled = false;
@@ -154,8 +164,22 @@ namespace OffsiteBackupOfflineSync.UI
     }
     public class Step2ViewModel : PatchAndApplyViewModelBase
     {
+        private string blackList;
+        private bool blackListUseRegex;
         private string localDir;
         private string offsiteSnapshot;
+        public string BlackList
+        {
+            get => blackList;
+            set => this.SetValueAndNotify(ref blackList, value, nameof(BlackList));
+        }
+
+        public bool BlackListUseRegex
+        {
+            get => blackListUseRegex;
+            set => this.SetValueAndNotify(ref blackListUseRegex, value, nameof(BlackListUseRegex));
+        }
+
         public string LocalDir
         {
             get => localDir;

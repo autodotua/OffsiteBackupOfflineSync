@@ -96,6 +96,7 @@
             <Button
                 x:Name="btnExport"
                 Grid.Column="4"
+                Width="128"
                 Click="ExportButton_Click"
                 Content="导出" />
         </Grid>

@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
@@ -9,11 +10,57 @@ namespace OffsiteBackupOfflineSync.Utility
         public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
         private string localDir;
         private volatile int index = 0;
-        public void Analyze(string localDir, string offsiteSnapshotFile)
+
+        private bool IsInBlackList(string name,string path,IList<string> balckList,IList<Regex> blackRegexs, bool blackListUseRegex)
+        {
+            for (int i = 0; i < balckList.Count; i++)
+            {
+                if (blackListUseRegex) //正则
+                {
+                    if (balckList[i].Contains('\\') || balckList[i].Contains('/')) //目录
+                    {
+                        if (blackRegexs[i].IsMatch(path))
+                        {
+                            return true;
+                        }
+                    }
+                    else //文件
+                    {
+                        if (blackRegexs[i].IsMatch(name))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    if (balckList[i].Contains('\\') || balckList[i].Contains('/')) //目录
+                    {
+                        if (path.Contains(balckList[i]))
+                        {
+                            return true;
+                        }
+                    }
+                    else //文件
+                    {
+
+                        if (name.Contains(balckList[i]))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        public void Search(string localDir, string offsiteSnapshotFile,string blackList,bool blackListUseRegex)
         {
             this.localDir = localDir;
             UpdateFiles.Clear();
             index = 0;
+            string[] blacks = blackList.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+            List<Regex> blackRegexs = blacks.Select(p => new Regex(p, RegexOptions.IgnoreCase)).ToList();
             ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>(); //临时的多线程需要更新文件列表
             Step1Model offsiteFiles = JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(offsiteSnapshotFile));
             Dictionary<string, SyncFile> path2file = offsiteFiles.Files.ToDictionary(p => p.Path); //从路径寻找本地文件的字典
@@ -32,6 +79,10 @@ namespace OffsiteBackupOfflineSync.Utility
                     string relativePath = Path.GetRelativePath(localDir, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
                     localFiles.TryAdd(relativePath, 0);
+                    if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
+                    {
+                        return;
+                    }
                     if (path2file.ContainsKey(relativePath))
                     {
                         var offsiteFile = path2file[relativePath];
@@ -76,6 +127,10 @@ namespace OffsiteBackupOfflineSync.Utility
             index = 0;
             foreach (var file in offsiteFiles.Files)
             {
+                if (IsInBlackList(file.Name, file.Path, blacks, blackRegexs, blackListUseRegex))
+                {
+                    continue;
+                }
                 InvokeMessageReceivedEvent($"正在查找删除的文件：{++index} / {offsiteFiles.Files.Count}");
                 if (!localFiles.ContainsKey(file.Path))
                 {

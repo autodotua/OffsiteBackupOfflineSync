@@ -14,11 +14,17 @@ namespace OffsiteBackupOfflineSync.UI
         private ObservableCollection<SyncFile> updateFiles;
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public long AddedFileLength => UpdateFiles?.Where(p => p.UpdateType == FileUpdateType.Add)?.Sum(p => p.Length) ?? 0;
+
+        public long DeletedFileCount => UpdateFiles?.Where(p => p.UpdateType == FileUpdateType.Delete)?.Count() ?? 0;
+
         public string Message
         {
             get => message;
             set => this.SetValueAndNotify(ref message, value, nameof(Message));
         }
+        public long ModifiedFileLength => UpdateFiles?.Where(p => p.UpdateType == FileUpdateType.Modify)?.Sum(p => p.Length) ?? 0;
+
         public double Progress
         {
             get => progress;
@@ -32,7 +38,7 @@ namespace OffsiteBackupOfflineSync.UI
         public ObservableCollection<SyncFile> UpdateFiles
         {
             get => updateFiles;
-            set => this.SetValueAndNotify(ref updateFiles, value, nameof(UpdateFiles));
+            set => this.SetValueAndNotify(ref updateFiles, value, nameof(UpdateFiles),nameof(AddedFileLength),nameof(ModifiedFileLength),nameof(DeletedFileCount));
         }
     }
 }

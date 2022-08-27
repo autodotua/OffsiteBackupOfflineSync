@@ -114,7 +114,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Progress = 0;
                 await Task.Run(() =>
                 {
-                    u.Update(ViewModel.OffsiteDir,Configs.Instance.DeletedDir,ViewModel.DeleteMode);
+                    u.Update(ViewModel.OffsiteDir,Configs.Instance.Step3DeletedDir,ViewModel.DeleteMode);
                 });
             }
             catch (OperationCanceledException)

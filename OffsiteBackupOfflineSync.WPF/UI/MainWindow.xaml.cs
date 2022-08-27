@@ -36,9 +36,11 @@ namespace OffsiteBackupOfflineSync.UI
             step1.ViewModel.Dir = config.Step1Dir;
             step2.ViewModel.OffsiteSnapshot = config.Step2OffsiteSnapshot;
             step2.ViewModel.LocalDir = config.Step2LocalDir;
+            step2.ViewModel.BlackList = config.Step2BlackList;
+            step2.ViewModel.BlackListUseRegex = config.Step2BlackListUseRegex;
             step3.ViewModel.PatchDir = config.Step3PatchDir;
             step3.ViewModel.OffsiteDir = config.Step3OffsiteDir;
-            step3.ViewModel.DeleteMode = config.DeleteMode;
+            step3.ViewModel.DeleteMode = config.Step3DeleteMode;
             frame.Navigate(step1);
         }
 
@@ -77,9 +79,11 @@ namespace OffsiteBackupOfflineSync.UI
             config.Step1Dir = step1.ViewModel.Dir;
             config.Step2OffsiteSnapshot = step2.ViewModel.OffsiteSnapshot;
             config.Step2LocalDir = step2.ViewModel.LocalDir;
+            config.Step2BlackList = step2.ViewModel.BlackList;
+            config.Step2BlackListUseRegex = step2.ViewModel.BlackListUseRegex;
             config.Step3PatchDir = step3.ViewModel.PatchDir;
             config.Step3OffsiteDir = step3.ViewModel.OffsiteDir;
-            config.DeleteMode = step3.ViewModel.DeleteMode;
+            config.Step3DeleteMode = step3.ViewModel.DeleteMode;
 
             config.Save();
         }

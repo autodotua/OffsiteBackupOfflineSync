@@ -11,6 +11,12 @@ namespace OffsiteBackupOfflineSync.Model
 {
     public class SyncFile : INotifyPropertyChanged
     {
+        private bool isChecked = true;
+
+        private bool complete;
+
+        private string message;
+
         public SyncFile()
         {
 
@@ -23,14 +29,14 @@ namespace OffsiteBackupOfflineSync.Model
             LastWriteTime = file.LastWriteTime;
             Length = file.Length;
         }
-        private bool complete;
-
-        private string message;
-
         public event PropertyChangedEventHandler PropertyChanged;
-
         [JsonIgnore]
-        public bool Checked { get; set; } = true;
+        public bool Checked
+        {
+            get => isChecked;
+            set => this.SetValueAndNotify(ref isChecked, value, nameof(Checked));
+        }
+
         [JsonIgnore]
         public bool Complete
         {

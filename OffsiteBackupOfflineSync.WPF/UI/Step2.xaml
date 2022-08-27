@@ -61,6 +61,30 @@
                     Click="BrowseLocalDirButton_Click"
                     Content="浏览" />
             </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="黑名单：" />
+                <TextBox
+                    Grid.Column="2"
+                    ui:ControlHelper.PlaceholderText="可以是文件名，也可以是完整路径；一行一项"
+                    AcceptsReturn="True"
+                    MaxLines="5"
+                    Text="{Binding BlackList}"
+                    VerticalScrollBarVisibility="Auto" />
+                <CheckBox
+                    Grid.Column="4"
+                    VerticalAlignment="Center"
+                    Content="使用正则表达式"
+                    IsChecked="{Binding BlackListUseRegex}" />
+            </Grid>
             <Grid HorizontalAlignment="Right">
                 <Button
                     x:Name="btnAnalyze"
@@ -70,6 +94,11 @@
             </Grid>
         </ui:SimpleStackPanel>
         <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <DataGrid
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
@@ -160,6 +189,33 @@
 
                 </DataGrid.Columns>
             </DataGrid>
+
+            <ui:SimpleStackPanel
+                Grid.Row="2"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="8">
+                <TextBlock VerticalAlignment="Center">
+                    <Run Text="共新增文件" />
+                    <Run Text="{Binding AddedFileLength, Mode=OneWay, Converter={StaticResource FileLength2StringConverter}}" />
+                    <Run Text="，修改文件" />
+                    <Run Text="{Binding ModifiedFileLength, Mode=OneWay, Converter={StaticResource FileLength2StringConverter}}" />
+                    <Run Text="，删除文件" />
+                    <Run Text="{Binding DeletedFileCount, Mode=OneWay}" />
+                    <Run Text="个" />
+                </TextBlock>
+                <Button
+                    Width="84"
+                    HorizontalAlignment="Stretch"
+                    Click="SelectAllButton_Click"
+                    Content="全选" />
+                <Button
+                    Grid.Column="2"
+                    Width="84"
+                    HorizontalAlignment="Stretch"
+                    Click="SelectNoneButton_Click"
+                    Content="全不选" />
+            </ui:SimpleStackPanel>
         </Grid>
         <Grid
             Grid.Row="99"
@@ -187,14 +243,14 @@
             <Button
                 x:Name="btnStop"
                 Grid.Column="4"
-                Padding="32,4"
+                Width="128"
                 Click="StopButton_Click"
                 Content="停止"
                 IsEnabled="False" />
             <Button
                 x:Name="btnPatch"
                 Grid.Column="6"
-                Padding="32,4"
+                Width="128"
                 Click="ExportButton_Click"
                 Content="生成补丁"
                 IsEnabled="False" />

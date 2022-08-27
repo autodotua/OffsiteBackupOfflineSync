@@ -192,7 +192,8 @@
                 VerticalAlignment="Center"
                 Text="被替换和删除的文件：" />
             <ComboBox
-                Grid.Column="6" Width="160"
+                Grid.Column="6"
+                Width="160"
                 ItemsSource="{Binding DeleteModes}"
                 SelectedItem="{Binding DeleteMode}">
                 <ComboBox.ItemTemplate>
@@ -206,14 +207,14 @@
             <Button
                 x:Name="btnStop"
                 Grid.Column="8"
-                Padding="32,4"
+                Width="128"
                 Click="StopButton_Click"
                 Content="停止"
                 IsEnabled="False" />
             <Button
                 x:Name="btnRebuild"
                 Grid.Column="10"
-                Padding="32,4"
+                Width="128"
                 Click="ExportButton_Click"
                 Content="更新"
                 IsEnabled="False" />

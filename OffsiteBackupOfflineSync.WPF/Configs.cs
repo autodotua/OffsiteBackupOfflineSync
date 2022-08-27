@@ -41,15 +41,13 @@ namespace OffsiteBackupOfflineSync
             }
         }
 
-        public string DeletedDir { get; set; } = "被删除和替换的文件备份";
-        public DeleteMode DeleteMode { get; set; } = DeleteMode.MoveToDeletedFolder;
-
         public string Step1Dir { get; set; }
-
+        public string Step2BlackList { get; set; } = "Thumbs.db";
+        public bool Step2BlackListUseRegex { get; set; }
         public string Step2LocalDir { get; set; }
-
         public string Step2OffsiteSnapshot { get; set; }
-
+        public string Step3DeletedDir { get; set; } = "被删除和替换的文件备份";
+        public DeleteMode Step3DeleteMode { get; set; } = DeleteMode.MoveToDeletedFolder;
         public string Step3OffsiteDir { get; set; }
 
         public string Step3PatchDir { get; set; }
