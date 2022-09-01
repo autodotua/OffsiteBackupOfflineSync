@@ -66,7 +66,7 @@ namespace OffsiteBackupOfflineSync.Utility
             long length = 0;
             foreach (var file in UpdateFiles)
             {
-                InvokeMessageReceivedEvent($"正在处理{file.Path}");
+                InvokeMessageReceivedEvent($"正在处理 {file.Path}");
                 string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
                 if (file.UpdateType != FileUpdateType.Delete && !File.Exists(patch))
                 {

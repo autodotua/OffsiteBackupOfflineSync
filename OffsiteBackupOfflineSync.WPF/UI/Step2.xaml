@@ -8,6 +8,7 @@
     xmlns:model="clr-namespace:OffsiteBackupOfflineSync.Model;assembly=OffsiteBackupOfflineSync.Core"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:ui="http://schemas.modernwpf.com/2019"
+    x:Name="root"
     d:DesignHeight="450"
     d:DesignWidth="800"
     mc:Ignorable="d">
@@ -22,6 +23,7 @@
         <ui:SimpleStackPanel
             x:Name="stkConfig"
             Margin="8"
+            IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}"
             Spacing="8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -87,7 +89,6 @@
             </Grid>
             <Grid HorizontalAlignment="Right">
                 <Button
-                    x:Name="btnAnalyze"
                     Padding="32,4"
                     Click="SearchChangeButton_Click"
                     Content="查找更改" />
@@ -108,7 +109,8 @@
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn
                         Binding="{Binding Checked}"
-                        Header="应用" />
+                        Header="应用"
+                        IsReadOnly="{Binding ElementName=root, Path=DataContext.Working}" />
                     <DataGridTextColumn
                         Binding="{Binding Name}"
                         Header="文件名"
@@ -208,13 +210,15 @@
                     Width="84"
                     HorizontalAlignment="Stretch"
                     Click="SelectAllButton_Click"
-                    Content="全选" />
+                    Content="全选"
+                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}" />
                 <Button
                     Grid.Column="2"
                     Width="84"
                     HorizontalAlignment="Stretch"
                     Click="SelectNoneButton_Click"
-                    Content="全不选" />
+                    Content="全不选"
+                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}" />
             </ui:SimpleStackPanel>
         </Grid>
         <Grid

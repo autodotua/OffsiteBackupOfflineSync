@@ -22,6 +22,7 @@
         <ui:SimpleStackPanel
             x:Name="stkConfig"
             Margin="8"
+            IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}"
             Spacing="8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -63,7 +64,6 @@
             </Grid>
             <Grid HorizontalAlignment="Right">
                 <Button
-                    x:Name="btnAnalyze"
                     Padding="32,4"
                     Click="AnalyzeButton_Click"
                     Content="分析" />

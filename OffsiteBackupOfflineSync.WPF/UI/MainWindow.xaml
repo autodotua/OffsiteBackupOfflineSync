@@ -9,13 +9,14 @@
     Title="异地备份离线同步"
     Width="1200"
     Height="800"
+    MinWidth="1080"
+    MinHeight="600"
     ui:TitleBar.Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-    ui:TitleBar.InactiveBackground="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
     ui:TitleBar.ExtendViewIntoTitleBar="False"
+    ui:TitleBar.InactiveBackground="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
     ui:TitleBar.IsIconVisible="True"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
-    WindowState="Maximized"
     mc:Ignorable="d">
     <ui:NavigationView
         Header="{Binding NavigationViewHeader}"

@@ -156,7 +156,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     string name = Guid.NewGuid().ToString();
                     file.TempName = name;
-                    InvokeMessageReceivedEvent($"正在复制{file.Path}");
+                    InvokeMessageReceivedEvent($"正在复制 {file.Path}");
                     File.Copy(Path.Combine(localDir, file.Path), Path.Combine(outputDir, name));
                     InvokeProgressReceivedEvent(length += file.Length, totalLength);
                 }

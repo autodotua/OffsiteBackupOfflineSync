@@ -12,6 +12,8 @@ namespace OffsiteBackupOfflineSync.UI
         private double progressMax;
 
         private ObservableCollection<SyncFile> updateFiles;
+        private bool working;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public long AddedFileLength => UpdateFiles?.Where(p => p.UpdateType == FileUpdateType.Add)?.Sum(p => p.Length) ?? 0;
@@ -40,6 +42,12 @@ namespace OffsiteBackupOfflineSync.UI
             get => updateFiles;
             set => this.SetValueAndNotify(ref updateFiles, value, nameof(UpdateFiles),nameof(AddedFileLength),nameof(ModifiedFileLength),nameof(DeletedFileCount));
         }
+        public bool Working
+        {
+            get => working;
+            set => this.SetValueAndNotify(ref working, value, nameof(Working));
+        }
+
     }
 }
 

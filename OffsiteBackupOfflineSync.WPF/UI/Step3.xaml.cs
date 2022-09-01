@@ -65,8 +65,9 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
-                btnAnalyze.IsEnabled = btnRebuild.IsEnabled = false;
+         btnRebuild.IsEnabled = false;
                 ViewModel.Message = "正在分析";
+                ViewModel.Working=true;
                 await Task.Run(() =>
                 {
                     u.Analyze(ViewModel.PatchDir,ViewModel.OffsiteDir);
@@ -80,8 +81,8 @@ namespace OffsiteBackupOfflineSync.UI
             }
             finally
             {
-                btnAnalyze.IsEnabled = true;
                 ViewModel.Message = "就绪";
+                ViewModel.Working = false;
             }
         }
 
@@ -145,8 +146,17 @@ namespace OffsiteBackupOfflineSync.UI
 
     public class Step3ViewModel : PatchAndApplyViewModelBase
     {
+        private DeleteMode deleteMode = DeleteMode.MoveToDeletedFolder;
         private string offsiteDir;
         private string patchDir;
+
+        public DeleteMode DeleteMode
+        {
+            get => deleteMode;
+            set => this.SetValueAndNotify(ref deleteMode, value, nameof(DeleteMode));
+        }
+
+        public IEnumerable DeleteModes => Enum.GetValues<DeleteMode>();
 
         public string OffsiteDir
         {
@@ -158,15 +168,6 @@ namespace OffsiteBackupOfflineSync.UI
             get => patchDir;
             set => this.SetValueAndNotify(ref patchDir, value, nameof(PatchDir));
         }
-
-        private DeleteMode deleteMode = DeleteMode.MoveToDeletedFolder;
-        public DeleteMode DeleteMode
-        {
-            get => deleteMode;
-            set => this.SetValueAndNotify(ref deleteMode, value, nameof(DeleteMode));
-        }
-
-        public IEnumerable DeleteModes => Enum.GetValues<DeleteMode>();
     }
 
 }

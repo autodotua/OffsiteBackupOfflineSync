@@ -68,6 +68,7 @@ namespace OffsiteBackupOfflineSync.UI
             {
                 try
                 {
+                    ViewModel.Working = true;
                     stkConfig.IsEnabled = false;
                     btnStop.IsEnabled = true;
                     btnPatch.IsEnabled = false;
@@ -91,6 +92,7 @@ namespace OffsiteBackupOfflineSync.UI
                     btnPatch.IsEnabled = true;
                     btnStop.IsEnabled = false;
                     ViewModel.Message = "就绪";
+                    ViewModel.Working=false;
                     ViewModel.Progress = ViewModel.ProgressMax;
                 }
             }
@@ -120,8 +122,9 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
-                btnAnalyze.IsEnabled = btnPatch.IsEnabled = false;
+            btnPatch.IsEnabled = false;
                 ViewModel.Message = "正在查找更改";
+                ViewModel.Working = true;
                 await Task.Run(() =>
                 {
                     u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot,ViewModel.BlackList,ViewModel.BlackListUseRegex);
@@ -142,18 +145,18 @@ namespace OffsiteBackupOfflineSync.UI
             }
             finally
             {
-                btnAnalyze.IsEnabled = true;
+                ViewModel.Working = false;
                 ViewModel.Message = "就绪";
             }
         }
         private void SelectAllButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.UpdateFiles.ForEach(p => p.Checked = true);
+            ViewModel.UpdateFiles?.ForEach(p => p.Checked = true);
         }
 
         private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.UpdateFiles.ForEach(p => p.Checked = false);
+            ViewModel.UpdateFiles?.ForEach(p => p.Checked = false);
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)

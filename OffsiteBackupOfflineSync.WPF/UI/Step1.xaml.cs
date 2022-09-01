@@ -14,6 +14,7 @@ using System.Collections.ObjectModel;
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
+using FzLib.Collection;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -22,24 +23,19 @@ namespace OffsiteBackupOfflineSync.UI
     /// </summary>
     public partial class Step1 : UserControl
     {
-       private readonly Step1Utility u=new Step1Utility();
+        private readonly Step1Utility u = new Step1Utility();
         public Step1()
         {
             DataContext = ViewModel;
             InitializeComponent();
-            ViewModel.PropertyChanged += (s, e) =>
-            {
-                if(e.PropertyName==nameof(ViewModel.Dirs))
-                {
-                    lst.SelectAll();
-                }
-            };
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
             u.MessageReceived += (s, e) =>
             {
                 ViewModel.Message = e.Message;
             };
 
         }
+
         public Step1ViewModel ViewModel { get; } = new Step1ViewModel();
 
         private void BrowseDirButton_Click(object sender, RoutedEventArgs e)
@@ -59,32 +55,16 @@ namespace OffsiteBackupOfflineSync.UI
                 await CommonDialog.ShowErrorDialogAsync("选择的目录为空");
                 return;
             }
-            string name = $"{DateTime.Now.ToString("yyyyMMdd")}-";
-            DriveInfo[] drives=DriveInfo.GetDrives();
-            if(drives.Any(p=> ViewModel.Dir.StartsWith(p.Name)))
-            {
-                var label = drives.First(p => ViewModel.Dir.StartsWith(p.Name)).VolumeLabel;
-                if (!string.IsNullOrEmpty(label))
-                {
-                    name += label;
-                }
-                else
-                {
-                    name += ViewModel.Dir[0];
-                }
-            }
-            else
-            {
-                name += ViewModel.Dir[0];
-            }
-          
+            string name = $"{DateTime.Now:yyyyMMdd}-";
+            name += GetVolumeName(name);
+            Configs.Instance.SelectedDirectoriesHistory.AddOrSetValue(ViewModel.Dir, dirs);
             string path = new FileFilterCollection().Add("异地备份快照", "obos1")
                 .CreateSaveFileDialog()
                 .SetDefault(name)
                 .GetFilePath();
             if (path != null)
             {
-               
+
                 ViewModel.Working = true;
                 btnExport.IsEnabled = false;
                 try
@@ -107,6 +87,21 @@ namespace OffsiteBackupOfflineSync.UI
                 }
             }
         }
+
+        private string GetVolumeName(string path)
+        {
+            DriveInfo[] drives = DriveInfo.GetDrives();
+            if (drives.Any(p => ViewModel.Dir.StartsWith(p.Name)))
+            {
+                var label = drives.First(p => ViewModel.Dir.StartsWith(p.Name)).VolumeLabel;
+                if (!string.IsNullOrEmpty(label))
+                {
+                    return label;
+                }
+            }
+            return path[0].ToString();
+        }
+
         private void SelectAllButton_Click(object sender, RoutedEventArgs e)
         {
             lst.SelectAll();
@@ -115,6 +110,38 @@ namespace OffsiteBackupOfflineSync.UI
         private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
         {
             lst.UnselectAll();
+        }
+
+        private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ViewModel.Dirs))
+            {
+                if(ViewModel.Dirs.Count == 0)
+                {
+                    return;
+                }
+                try
+                {
+                    lst.SelectedItems.Clear();
+                    if (!string.IsNullOrEmpty(ViewModel.Dir))
+                    {
+                        if (Configs.Instance.SelectedDirectoriesHistory.ContainsKey(ViewModel.Dir))
+                        {
+                            foreach (var item in Configs.Instance.SelectedDirectoriesHistory[ViewModel.Dir])
+                            {
+                                if (ViewModel.Dirs.Contains(item))
+                                {
+                                    lst.SelectedItems.Add(item);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    lst.SelectAll();
+                }
+            }
         }
     }
 
@@ -136,8 +163,8 @@ namespace OffsiteBackupOfflineSync.UI
                 if (Directory.Exists(value))
                 {
                     Dirs = Directory.EnumerateDirectories(value)
-                        .Where(p=>!p.EndsWith("System Volume Information"))
-                        .Where(p=>!p.Contains('$'))
+                        .Where(p => !p.EndsWith("System Volume Information"))
+                        .Where(p => !p.Contains('$'))
                         .ToList();
                 }
                 else

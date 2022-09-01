@@ -49,6 +49,7 @@ namespace OffsiteBackupOfflineSync
         public string Step3DeletedDir { get; set; } = "被删除和替换的文件备份";
         public DeleteMode Step3DeleteMode { get; set; } = DeleteMode.MoveToDeletedFolder;
         public string Step3OffsiteDir { get; set; }
+        public Dictionary<string, List<string>> SelectedDirectoriesHistory { get; set; }=new Dictionary<string, List<string>>();
 
         public string Step3PatchDir { get; set; }
 

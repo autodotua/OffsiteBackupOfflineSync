@@ -21,6 +21,7 @@
         <ui:SimpleStackPanel
             x:Name="stkConfig"
             Margin="8"
+            IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}"
             Spacing="8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -45,7 +46,8 @@
 
         <GroupBox
             Grid.Row="2"
-            Header="需要同步的目录">
+            Header="需要同步的目录"
+            IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
