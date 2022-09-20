@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Newtonsoft.Json;
 
 namespace OffsiteBackupOfflineSync.Model
 {
+    [DebuggerDisplay("{Name}")]
     public class SyncFile : INotifyPropertyChanged
     {
         private bool isChecked = true;
@@ -23,7 +25,6 @@ namespace OffsiteBackupOfflineSync.Model
         }
         public SyncFile(FileInfo file, string rootDir)
         {
-
             Name = file.Name;
             Path = System.IO.Path.GetRelativePath(System.IO.Path.GetDirectoryName(rootDir), file.FullName);
             LastWriteTime = file.LastWriteTime;

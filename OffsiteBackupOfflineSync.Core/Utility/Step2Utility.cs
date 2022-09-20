@@ -54,7 +54,7 @@ namespace OffsiteBackupOfflineSync.Utility
             return false;
         }
 
-        public void Search(string localDir, string offsiteSnapshotFile,string blackList,bool blackListUseRegex)
+        public void Search(string localDir, string offsiteSnapshotFile,string blackList,bool blackListUseRegex,double maxTimeTolerance)
         {
             this.localDir = localDir;
             UpdateFiles.Clear();
@@ -86,7 +86,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     if (path2file.ContainsKey(relativePath))
                     {
                         var offsiteFile = path2file[relativePath];
-                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).Duration().TotalSeconds < 1
+                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).Duration().TotalSeconds < maxTimeTolerance
                         && offsiteFile.Length == file.Length)//文件没有发生改动
                         {
                             return;
@@ -101,7 +101,7 @@ namespace OffsiteBackupOfflineSync.Utility
                             LastWriteTime = file.LastWriteTime,
                             UpdateType = FileUpdateType.Modify
                         };
-                        if (offsiteFile.LastWriteTime > file.LastWriteTime)
+                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).TotalSeconds> maxTimeTolerance)
                         {
                             newFile.Message = "异地文件时间晚于本地文件时间";
                         }

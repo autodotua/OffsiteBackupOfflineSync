@@ -127,7 +127,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Working = true;
                 await Task.Run(() =>
                 {
-                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot,ViewModel.BlackList,ViewModel.BlackListUseRegex);
+                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot,ViewModel.BlackList,ViewModel.BlackListUseRegex,Configs.MaxTimeTolerance);
                     ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles);
                 });
                 if (ViewModel.UpdateFiles.Count == 0)

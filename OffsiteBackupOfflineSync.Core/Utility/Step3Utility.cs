@@ -10,7 +10,7 @@ namespace OffsiteBackupOfflineSync.Utility
     {
         public List<SyncFile> UpdateFiles { get; private set; } = new List<SyncFile>();
         private string patchDir;
-        public void Analyze(string patchDir,string offsiteDir)
+        public void Analyze(string patchDir, string offsiteDir)
         {
             this.patchDir = patchDir;
             var json = File.ReadAllText(Path.Combine(patchDir, "file.obos2"));
@@ -58,10 +58,10 @@ namespace OffsiteBackupOfflineSync.Utility
 
         }
 
-        public void Update(string offsiteDir,string deletedDir, DeleteMode deleteMode)
+        public void Update(string offsiteDir, string deletedDir, DeleteMode deleteMode)
         {
             stopping = false;
-             deletedDir = Path.Combine(offsiteDir, deletedDir, DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
+            deletedDir = Path.Combine(offsiteDir, deletedDir, DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
             long totalLength = UpdateFiles.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
             foreach (var file in UpdateFiles)
@@ -73,7 +73,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     continue;
                 }
                 string target = Path.Combine(offsiteDir, file.Path);
-                if(!Directory.Exists(Path.GetDirectoryName(target)))
+                if (!Directory.Exists(Path.GetDirectoryName(target)))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(target));
                 }
@@ -86,6 +86,7 @@ namespace OffsiteBackupOfflineSync.Utility
                             Delete(offsiteDir, target, deletedDir, deleteMode);
                         }
                         File.Copy(patch, target);
+                        File.SetLastWriteTime(target, file.LastWriteTime);
                         InvokeProgressReceivedEvent(length += file.Length, totalLength);
                         break;
                     case FileUpdateType.Modify:
@@ -98,6 +99,7 @@ namespace OffsiteBackupOfflineSync.Utility
                             file.Message = "应当为修改后文件，但文件不存在";
                         }
                         File.Copy(patch, target);
+                        File.SetLastWriteTime(target, file.LastWriteTime);
                         InvokeProgressReceivedEvent(length += file.Length, totalLength);
                         break;
                     case FileUpdateType.Delete:
@@ -120,10 +122,10 @@ namespace OffsiteBackupOfflineSync.Utility
                 }
             }
         }
-        private static void Delete(string rootDir,string filePath,string deletedFolder, DeleteMode deleteMode)
+        private static void Delete(string rootDir, string filePath, string deletedFolder, DeleteMode deleteMode)
         {
             Debug.Assert(File.Exists(filePath));
-            if(!filePath.StartsWith(rootDir))
+            if (!filePath.StartsWith(rootDir))
             {
                 throw new ArgumentException("文件不在目录中");
             }
@@ -136,9 +138,9 @@ namespace OffsiteBackupOfflineSync.Utility
                     WindowsFileSystem.DeleteFileOrFolder(filePath, false, true);
                     break;
                 case DeleteMode.MoveToDeletedFolder:
-                    string relative=Path.GetRelativePath(rootDir, filePath);
+                    string relative = Path.GetRelativePath(rootDir, filePath);
                     string target = Path.Combine(deletedFolder, relative);
-                    string dir=Path.GetDirectoryName(target);
+                    string dir = Path.GetDirectoryName(target);
                     if (!Directory.Exists(dir))
                     {
                         Directory.CreateDirectory(dir);
