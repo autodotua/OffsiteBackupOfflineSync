@@ -103,35 +103,80 @@
             <DataGrid
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
-                CanUserReorderColumns="False"
-                CanUserSortColumns="False"
+                CanUserReorderColumns="True"
                 ItemsSource="{Binding UpdateFiles}">
+                <DataGrid.Resources>
+                    <Style
+                        x:Key="DataGridCheckBoxColumnTextWrappingStyle"
+                        TargetType="{x:Type TextBlock}">
+                        <Setter Property="TextWrapping" Value="Wrap" />
+                        <Setter Property="VerticalAlignment" Value="Center" />
+                        <Setter Property="HorizontalAlignment" Value="Left" />
+                        <Setter Property="Margin" Value="8,0" />
+                    </Style>
+                </DataGrid.Resources>
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn
                         Binding="{Binding Checked}"
+                        CanUserReorder="False"
+                        CanUserResize="False"
+                        CanUserSort="False"
                         Header="应用"
                         IsReadOnly="{Binding ElementName=root, Path=DataContext.Working}" />
+                    <DataGridTemplateColumn
+                        CanUserResize="False"
+                        Header="完成">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock
+                                    x:Name="e"
+                                    Margin="16,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="Green"
+                                    Text="●"
+                                    Visibility="Collapsed" />
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Complete}">
+                                        <DataTrigger.Value>
+                                            <sys:Boolean>True</sys:Boolean>
+                                        </DataTrigger.Value>
+                                        <DataTrigger.Setters>
+                                            <Setter TargetName="e" Property="Visibility" Value="Visible" />
+                                        </DataTrigger.Setters>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
                     <DataGridTextColumn
+                        Width="200"
                         Binding="{Binding Name}"
+                        ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="文件名"
                         IsReadOnly="True" />
                     <DataGridTextColumn
+                        Width="300"
                         Binding="{Binding Path}"
+                        ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="路径"
                         IsReadOnly="True" />
 
                     <DataGridTextColumn
                         Binding="{Binding LastWriteTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                        CanUserResize="False"
                         Header="修改时间"
                         IsReadOnly="True" />
                     <DataGridTextColumn
                         Binding="{Binding Length, Converter={StaticResource FileLength2StringConverter}}"
+                        CanUserResize="False"
                         Header="大小"
                         IsReadOnly="True" />
 
                     <DataGridTemplateColumn
-                        Width="64"
-                        Header="更新类型">
+                        CanUserResize="False"
+                        Header="更新类型"
+                        SortMemberPath="UpdateType">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock
@@ -163,31 +208,9 @@
                     </DataGridTemplateColumn>
                     <DataGridTextColumn
                         Binding="{Binding Message}"
+                        CanUserResize="False"
                         Header="信息"
                         IsReadOnly="True" />
-                    <DataGridTemplateColumn Header="完成">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock
-                                    x:Name="e"
-                                    Margin="16,0"
-                                    VerticalAlignment="Center"
-                                    Foreground="Green"
-                                    Text="●"
-                                    Visibility="Collapsed" />
-                                <DataTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding Complete}">
-                                        <DataTrigger.Value>
-                                            <sys:Boolean>True</sys:Boolean>
-                                        </DataTrigger.Value>
-                                        <DataTrigger.Setters>
-                                            <Setter TargetName="e" Property="Visibility" Value="Visible" />
-                                        </DataTrigger.Setters>
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
 
                 </DataGrid.Columns>
             </DataGrid>
