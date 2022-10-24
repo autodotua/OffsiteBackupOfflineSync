@@ -8,10 +8,20 @@ namespace OffsiteBackupOfflineSync.Utility
     public class Step2Utility : SyncUtilityBase
     {
         public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
+        public List<string> LocalDirectories { get; } = new List<string>();
         private string localDir;
         private volatile int index = 0;
 
-        private bool IsInBlackList(string name,string path,IList<string> balckList,IList<Regex> blackRegexs, bool blackListUseRegex)
+        /// <summary>
+        /// 文件是否在黑名单中
+        /// </summary>
+        /// <param name="name">文件名</param>
+        /// <param name="path">文件路径</param>
+        /// <param name="balckList">黑名单列表</param>
+        /// <param name="blackRegexs">黑名单正则列表</param>
+        /// <param name="blackListUseRegex">是否启用正则</param>
+        /// <returns></returns>
+        private bool IsInBlackList(string name, string path, IList<string> balckList, IList<Regex> blackRegexs, bool blackListUseRegex)
         {
             for (int i = 0; i < balckList.Count; i++)
             {
@@ -54,20 +64,31 @@ namespace OffsiteBackupOfflineSync.Utility
             return false;
         }
 
-        public void Search(string localDir, string offsiteSnapshotFile,string blackList,bool blackListUseRegex,double maxTimeTolerance)
+        /// <summary>
+        /// 搜索
+        /// </summary>
+        /// <param name="localDir">本地目录</param>
+        /// <param name="offsiteSnapshotFile">异地快照文件</param>
+        /// <param name="blackList">黑名单</param>
+        /// <param name="blackListUseRegex">黑名单是否启用正则</param>
+        /// <param name="maxTimeTolerance">对比时修改时间容差</param>
+        public void Search(string localDir, string offsiteSnapshotFile, string blackList, bool blackListUseRegex, double maxTimeTolerance)
         {
             this.localDir = localDir;
             UpdateFiles.Clear();
+            LocalDirectories.Clear();
             index = 0;
             string[] blacks = blackList.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
             List<Regex> blackRegexs = blacks.Select(p => new Regex(p, RegexOptions.IgnoreCase)).ToList();
             ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>(); //临时的多线程需要更新文件列表
-            Step1Model offsiteFiles = JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(offsiteSnapshotFile));
-            Dictionary<string, SyncFile> path2file = offsiteFiles.Files.ToDictionary(p => p.Path); //从路径寻找本地文件的字典
+            Step1Model offsite = JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(offsiteSnapshotFile));
+            Dictionary<string, SyncFile> path2file = offsite.Files.ToDictionary(p => p.Path); //从路径寻找本地文件的字典
             ConcurrentDictionary<string, byte> localFiles = new ConcurrentDictionary<string, byte>(); //用于之后寻找差异文件的哈希表
+
+            //枚举本地文件，寻找离线快照中是否存在相同文件
             foreach (var dir in new DirectoryInfo(localDir).EnumerateDirectories())
             {
-                if (!offsiteFiles.TopDirectories.Any(p => p.Name == dir.Name))
+                if (!offsite.TopDirectories.Contains(dir.Name))
                 {
                     continue;
                 }
@@ -101,7 +122,7 @@ namespace OffsiteBackupOfflineSync.Utility
                             LastWriteTime = file.LastWriteTime,
                             UpdateType = FileUpdateType.Modify
                         };
-                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).TotalSeconds> maxTimeTolerance)
+                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).TotalSeconds > maxTimeTolerance)
                         {
                             newFile.Message = "异地文件时间晚于本地文件时间";
                         }
@@ -121,17 +142,24 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                 });
 
-
+                LocalDirectories.Add(dir.Name);
+                foreach (var subDir in dir.EnumerateDirectories("*", SearchOption.AllDirectories))
+                {
+                    string relativePath = Path.GetRelativePath(localDir, subDir.FullName);
+                    LocalDirectories.Add(relativePath);
+                }
             }
             UpdateFiles.AddRange(tempUpdateFiles);
+
+            //枚举异地快照，查找本地文件中不存在的文件
             index = 0;
-            foreach (var file in offsiteFiles.Files)
+            foreach (var file in offsite.Files)
             {
                 if (IsInBlackList(file.Name, file.Path, blacks, blackRegexs, blackListUseRegex))
                 {
                     continue;
                 }
-                InvokeMessageReceivedEvent($"正在查找删除的文件：{++index} / {offsiteFiles.Files.Count}");
+                InvokeMessageReceivedEvent($"正在查找删除的文件：{++index} / {offsite.Files.Count}");
                 if (!localFiles.ContainsKey(file.Path))
                 {
                     file.UpdateType = FileUpdateType.Delete;
@@ -167,7 +195,13 @@ namespace OffsiteBackupOfflineSync.Utility
                 }
             }
 
-            var json = JsonConvert.SerializeObject(files, Formatting.Indented);
+            Step2Model model = new Step2Model()
+            {
+                Files = files,
+                LocalDirectories = LocalDirectories
+            };
+
+            var json = JsonConvert.SerializeObject(model, Formatting.Indented);
             File.WriteAllText(Path.Combine(outputDir, "file.obos2"), json);
         }
     }

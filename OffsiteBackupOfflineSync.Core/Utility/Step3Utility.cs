@@ -8,13 +8,19 @@ namespace OffsiteBackupOfflineSync.Utility
 {
     public class Step3Utility : SyncUtilityBase
     {
-        public List<SyncFile> UpdateFiles { get; private set; } = new List<SyncFile>();
+        public List<SyncFile> UpdateFiles { get; private set; }
+        public List<string> LocalDirectories { get; private set; } 
         private string patchDir;
         public void Analyze(string patchDir, string offsiteDir)
         {
             this.patchDir = patchDir;
             var json = File.ReadAllText(Path.Combine(patchDir, "file.obos2"));
-            UpdateFiles = JsonConvert.DeserializeObject<List<SyncFile>>(json);
+            var step2 = JsonConvert.DeserializeObject<Step2Model>(json);
+
+            UpdateFiles = step2.Files;
+            LocalDirectories = step2.LocalDirectories;
+
+            //检查文件
             foreach (var file in UpdateFiles)
             {
                 string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
@@ -64,6 +70,8 @@ namespace OffsiteBackupOfflineSync.Utility
             deletedDir = Path.Combine(offsiteDir, deletedDir, DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
             long totalLength = UpdateFiles.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
+
+            //更新文件
             foreach (var file in UpdateFiles)
             {
                 InvokeMessageReceivedEvent($"正在处理 {file.Path}");
@@ -77,54 +85,79 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(target));
                 }
-                switch (file.UpdateType)
+                try
                 {
-                    case FileUpdateType.Add:
-                        if (File.Exists(target))
-                        {
-                            file.Message = "应当为新增文件，但文件已存在";
-                            Delete(offsiteDir, target, deletedDir, deleteMode);
-                        }
-                        File.Copy(patch, target);
-                        File.SetLastWriteTime(target, file.LastWriteTime);
-                        InvokeProgressReceivedEvent(length += file.Length, totalLength);
-                        break;
-                    case FileUpdateType.Modify:
-                        if (File.Exists(target))
-                        {
-                            Delete(offsiteDir, target, deletedDir, deleteMode);
-                        }
-                        else
-                        {
-                            file.Message = "应当为修改后文件，但文件不存在";
-                        }
-                        File.Copy(patch, target);
-                        File.SetLastWriteTime(target, file.LastWriteTime);
-                        InvokeProgressReceivedEvent(length += file.Length, totalLength);
-                        break;
-                    case FileUpdateType.Delete:
-                        if (File.Exists(target))
-                        {
-                            Delete(offsiteDir, target, deletedDir, deleteMode);
-                        }
-                        else
-                        {
-                            file.Message = "应当为待删除文件，但文件不存在";
-                        }
-                        break;
-                    default:
-                        throw new InvalidEnumArgumentException();
+                    switch (file.UpdateType)
+                    {
+                        case FileUpdateType.Add:
+                            if (File.Exists(target))
+                            {
+                                Delete(offsiteDir, target, deletedDir, deleteMode);
+                            }
+                            File.Copy(patch, target);
+                            File.SetLastWriteTime(target, file.LastWriteTime);
+                            InvokeProgressReceivedEvent(length += file.Length, totalLength);
+                            break;
+                        case FileUpdateType.Modify:
+                            if (File.Exists(target))
+                            {
+                                Delete(offsiteDir, target, deletedDir, deleteMode);
+                            }
+                            File.Copy(patch, target);
+                            File.SetLastWriteTime(target, file.LastWriteTime);
+                            InvokeProgressReceivedEvent(length += file.Length, totalLength);
+                            break;
+                        case FileUpdateType.Delete:
+                            if (File.Exists(target))
+                            {
+                                Delete(offsiteDir, target, deletedDir, deleteMode);
+                            }
+                            break;
+                        default:
+                            throw new InvalidEnumArgumentException();
+                    }
+                    file.Complete = true;
                 }
-                file.Complete = true;
+                catch(Exception ex)
+                {
+                    file.Message = $"错误：{ex.Message}";
+                }
                 if (stopping)
                 {
                     throw new OperationCanceledException();
                 }
             }
+
+            //清理空目录
+            foreach (var offsiteTopDir in Directory.EnumerateDirectories(offsiteDir).ToList())
+            {
+                //本地不存在远程的顶级目录，跳过
+                if (!LocalDirectories.Contains(Path.GetRelativePath(offsiteDir, offsiteTopDir)))
+                {
+                    continue;
+                }
+
+                foreach (var offsiteSubDir in Directory.EnumerateDirectories(offsiteTopDir, "*", SearchOption.AllDirectories).ToList())
+                {
+                    if (!LocalDirectories.Contains(Path.GetRelativePath(offsiteDir, offsiteSubDir)))//本地已经没有远程的这个目录了
+                    {
+                        if (!Directory.EnumerateFiles(offsiteSubDir).Any())//并且远程的这个目录是空的
+                        {
+                            Delete(offsiteDir, offsiteSubDir, deletedDir, deleteMode);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static bool IsDirectory(string path)
+        {
+            FileAttributes attr = File.GetAttributes(path);
+            return attr.HasFlag(FileAttributes.Directory);
         }
         private static void Delete(string rootDir, string filePath, string deletedFolder, DeleteMode deleteMode)
         {
-            Debug.Assert(File.Exists(filePath));
+            Debug.Assert(IsDirectory(filePath)||true);
             if (!filePath.StartsWith(rootDir))
             {
                 throw new ArgumentException("文件不在目录中");
@@ -132,7 +165,14 @@ namespace OffsiteBackupOfflineSync.Utility
             switch (deleteMode)
             {
                 case DeleteMode.Delete:
-                    File.Delete(filePath);
+                    if (IsDirectory(filePath))
+                    {
+                        Directory.Delete(filePath, true);
+                    }
+                    else
+                    {
+                        File.Delete(filePath);
+                    }
                     break;
                 case DeleteMode.MoveToRecycleBin:
                     WindowsFileSystem.DeleteFileOrFolder(filePath, false, true);
@@ -145,7 +185,14 @@ namespace OffsiteBackupOfflineSync.Utility
                     {
                         Directory.CreateDirectory(dir);
                     }
-                    File.Move(filePath, target);
+                    if (IsDirectory(filePath))
+                    {
+                        Directory.Move(filePath, target);
+                    }
+                    else
+                    {
+                        File.Move(filePath, target);
+                    }
                     break;
                 default:
                     throw new InvalidEnumArgumentException();

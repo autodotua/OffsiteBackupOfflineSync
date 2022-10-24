@@ -11,7 +11,7 @@ namespace OffsiteBackupOfflineSync.Utility
         {
             index = 0;
             List<SyncFile> syncFiles = new List<SyncFile>();
-            List<SyncFile> topDirectories = new List<SyncFile>();
+            List<string> topDirectories = new List<string>();
             foreach (var dir in dirs)
             {
                 //为了加快速度，用了一些技巧
@@ -37,12 +37,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 //        Length = file.Length,
                 //    }));
                 var dirInfo = new DirectoryInfo(dir);
-                topDirectories.Add(new SyncFile()
-                {
-                    Name = dirInfo.Name,
-                    Path = dirInfo.FullName,
-                    LastWriteTime = dirInfo.LastWriteTime,
-                });
+                topDirectories.Add(dirInfo.Name);
             }
             Step1Model model = new Step1Model()
             {
