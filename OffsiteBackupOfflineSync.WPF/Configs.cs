@@ -65,7 +65,14 @@ namespace OffsiteBackupOfflineSync
 
         public void Save()
         {
-            Save(configPath);
+            try
+            {
+                Save(configPath);
+            }
+            catch
+            {
+
+            }
         }
     }
 

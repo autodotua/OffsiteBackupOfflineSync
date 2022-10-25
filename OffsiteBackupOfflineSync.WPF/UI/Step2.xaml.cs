@@ -92,7 +92,7 @@ namespace OffsiteBackupOfflineSync.UI
                     btnPatch.IsEnabled = true;
                     btnStop.IsEnabled = false;
                     ViewModel.Message = "就绪";
-                    ViewModel.Working=false;
+                    ViewModel.Working = false;
                     ViewModel.Progress = ViewModel.ProgressMax;
                 }
             }
@@ -100,34 +100,34 @@ namespace OffsiteBackupOfflineSync.UI
 
         private async void SearchChangeButton_Click(object sender, RoutedEventArgs e)
         {
-            if(string.IsNullOrEmpty(ViewModel.OffsiteSnapshot))
+            if (string.IsNullOrEmpty(ViewModel.OffsiteSnapshot))
             {
                 await CommonDialog.ShowErrorDialogAsync("快照文件为空");
                 return;
             }
-            if(!File.Exists(ViewModel.OffsiteSnapshot))
+            if (!File.Exists(ViewModel.OffsiteSnapshot))
             {
                 await CommonDialog.ShowErrorDialogAsync("快照文件不存在");
                 return;
             }
-            if(string.IsNullOrEmpty(ViewModel.LocalDir))
+            if (string.IsNullOrEmpty(ViewModel.LocalDir))
             {
                 await CommonDialog.ShowErrorDialogAsync("本地目录为空");
                 return;
             }
-            if(!Directory.Exists(ViewModel.LocalDir))
+            if (!Directory.Exists(ViewModel.LocalDir))
             {
                 await CommonDialog.ShowErrorDialogAsync("本地目录不存在");
                 return;
             }
             try
             {
-            btnPatch.IsEnabled = false;
+                btnPatch.IsEnabled = false;
                 ViewModel.Message = "正在查找更改";
                 ViewModel.Working = true;
                 await Task.Run(() =>
                 {
-                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot,ViewModel.BlackList,ViewModel.BlackListUseRegex,Configs.MaxTimeTolerance);
+                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot, ViewModel.BlackList, ViewModel.BlackListUseRegex, Configs.MaxTimeTolerance);
                     ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles);
                 });
                 if (ViewModel.UpdateFiles.Count == 0)
@@ -149,6 +149,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Message = "就绪";
             }
         }
+
         private void SelectAllButton_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.UpdateFiles?.ForEach(p => p.Checked = true);

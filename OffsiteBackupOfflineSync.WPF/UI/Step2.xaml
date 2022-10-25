@@ -105,19 +105,9 @@
                 CanUserAddRows="False"
                 CanUserReorderColumns="True"
                 ItemsSource="{Binding UpdateFiles}">
-                <DataGrid.Resources>
-                    <Style
-                        x:Key="DataGridCheckBoxColumnTextWrappingStyle"
-                        TargetType="{x:Type TextBlock}">
-                        <Setter Property="TextWrapping" Value="Wrap" />
-                        <Setter Property="VerticalAlignment" Value="Center" />
-                        <Setter Property="HorizontalAlignment" Value="Left" />
-                        <Setter Property="Margin" Value="8,0" />
-                    </Style>
-                </DataGrid.Resources>
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn
-                        Binding="{Binding Checked}"
+                        Binding="{Binding Checked, UpdateSourceTrigger=PropertyChanged}"
                         CanUserReorder="False"
                         CanUserResize="False"
                         CanUserSort="False"
@@ -217,6 +207,7 @@
 
             <ui:SimpleStackPanel
                 Grid.Row="2"
+                Margin="8,0"
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
                 Spacing="8">
@@ -229,19 +220,20 @@
                     <Run Text="{Binding DeletedFileCount, Mode=OneWay}" />
                     <Run Text="个" />
                 </TextBlock>
+
                 <Button
-                    Width="84"
                     HorizontalAlignment="Stretch"
                     Click="SelectAllButton_Click"
-                    Content="全选"
-                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}" />
+                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}">
+                    <ui:SymbolIcon Symbol="SelectAll" />
+                </Button>
                 <Button
                     Grid.Column="2"
-                    Width="84"
                     HorizontalAlignment="Stretch"
                     Click="SelectNoneButton_Click"
-                    Content="全不选"
-                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}" />
+                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}">
+                    <ui:SymbolIcon Symbol="ClearSelection" />
+                </Button>
             </ui:SimpleStackPanel>
         </Grid>
         <Grid

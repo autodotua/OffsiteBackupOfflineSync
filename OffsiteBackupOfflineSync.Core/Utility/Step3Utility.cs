@@ -9,7 +9,8 @@ namespace OffsiteBackupOfflineSync.Utility
     public class Step3Utility : SyncUtilityBase
     {
         public List<SyncFile> UpdateFiles { get; private set; }
-        public List<string> LocalDirectories { get; private set; } 
+        public List<string> LocalDirectories { get; private set; }
+        public List<string> DeletingDirectories { get; private set; }
         private string patchDir;
         public void Analyze(string patchDir, string offsiteDir)
         {
@@ -67,12 +68,12 @@ namespace OffsiteBackupOfflineSync.Utility
         public void Update(string offsiteDir, string deletedDir, DeleteMode deleteMode)
         {
             stopping = false;
-            deletedDir = Path.Combine(offsiteDir, deletedDir, DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
-            long totalLength = UpdateFiles.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
+            var updateFiles = UpdateFiles.Where(p => p.Checked).ToList();
+            long totalLength = updateFiles.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
 
             //更新文件
-            foreach (var file in UpdateFiles)
+            foreach (var file in updateFiles)
             {
                 InvokeMessageReceivedEvent($"正在处理 {file.Path}");
                 string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
@@ -118,7 +119,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                     file.Complete = true;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     file.Message = $"错误：{ex.Message}";
                 }
@@ -128,6 +129,11 @@ namespace OffsiteBackupOfflineSync.Utility
                 }
             }
 
+        }
+
+        public void AnalyzeEmptyDirectories(string offsiteDir, DeleteMode deleteMode)
+        {
+            DeletingDirectories = new List<string>();
             //清理空目录
             foreach (var offsiteTopDir in Directory.EnumerateDirectories(offsiteDir).ToList())
             {
@@ -143,13 +149,37 @@ namespace OffsiteBackupOfflineSync.Utility
                     {
                         if (!Directory.EnumerateFiles(offsiteSubDir).Any())//并且远程的这个目录是空的
                         {
-                            Delete(offsiteDir, offsiteSubDir, deletedDir, deleteMode);
+                            DeletingDirectories.Add(offsiteSubDir);
                         }
                     }
                 }
             }
-        }
 
+
+            //通过两层循环，删除位于空目录下的空目录
+            foreach (var dir1 in DeletingDirectories.ToList())//外层循环，dir1为内层空目录
+            {
+                foreach (var dir2 in DeletingDirectories)//内存循环，dir2为外层空目录
+                {
+                    if (dir1 == dir2)
+                    {
+                        continue;
+                    }
+                    if (dir1.StartsWith(dir2))//如果dir2位于dir1的外层，那么dir1就不需要单独删除
+                    {
+                        DeletingDirectories.Remove(dir1);
+                        break;
+                    }
+                }
+            }
+        }
+        public void DeleteEmptyDirectories(string offsiteDir, string deletedDir, DeleteMode deleteMode)
+        {
+            foreach (var dir in DeletingDirectories)
+            {
+                Delete(offsiteDir, dir, deletedDir, deleteMode);
+            }
+        }
         private static bool IsDirectory(string path)
         {
             FileAttributes attr = File.GetAttributes(path);
@@ -157,7 +187,7 @@ namespace OffsiteBackupOfflineSync.Utility
         }
         private static void Delete(string rootDir, string filePath, string deletedFolder, DeleteMode deleteMode)
         {
-            Debug.Assert(IsDirectory(filePath)||true);
+            Debug.Assert(IsDirectory(filePath) || true);
             if (!filePath.StartsWith(rootDir))
             {
                 throw new ArgumentException("文件不在目录中");
@@ -187,17 +217,81 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                     if (IsDirectory(filePath))
                     {
-                        Directory.Move(filePath, target);
+                        Directory.Move(filePath, GetNoDuplicateDirectory(target));
                     }
                     else
                     {
-                        File.Move(filePath, target);
+                        File.Move(filePath, GetNoDuplicateFile(target));
                     }
                     break;
                 default:
                     throw new InvalidEnumArgumentException();
             }
 
+        }
+
+
+        public static string GetNoDuplicateFile(string path, string suffixFormat = " ({i})")
+        {
+            if (!File.Exists(path))
+            {
+                return path;
+            }
+
+            if (!suffixFormat.Contains("{i}"))
+            {
+                throw new ArgumentException("后缀应包含“{i}”以表示索引");
+            }
+
+            int num = 2;
+            string directoryName = Path.GetDirectoryName(path);
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
+            string extension = Path.GetExtension(path);
+            string text;
+            while (true)
+            {
+                text = Path.Combine(directoryName, fileNameWithoutExtension + suffixFormat.Replace("{i}", num.ToString()) + extension);
+                if (!File.Exists(text))
+                {
+                    break;
+                }
+
+                num++;
+            }
+
+            return text;
+        }
+
+
+        public static string GetNoDuplicateDirectory(string path, string suffixFormat = " ({i})")
+        {
+            if (!Directory.Exists(path))
+            {
+                return path;
+            }
+
+            if (!suffixFormat.Contains("{i}"))
+            {
+                throw new ArgumentException("后缀应包含“{i}”以表示索引");
+            }
+
+            int num = 2;
+            string directoryName = Path.GetDirectoryName(path);
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
+            string extension = Path.GetExtension(path);
+            string text;
+            while (true)
+            {
+                text = Path.Combine(directoryName, fileNameWithoutExtension + suffixFormat.Replace("{i}", num.ToString()) + extension);
+                if (!Directory.Exists(text))
+                {
+                    break;
+                }
+
+                num++;
+            }
+
+            return text;
         }
     }
 

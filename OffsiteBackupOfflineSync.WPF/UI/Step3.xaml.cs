@@ -65,12 +65,12 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
-         btnRebuild.IsEnabled = false;
+                btnRebuild.IsEnabled = false;
                 ViewModel.Message = "正在分析";
-                ViewModel.Working=true;
+                ViewModel.Working = true;
                 await Task.Run(() =>
                 {
-                    u.Analyze(ViewModel.PatchDir,ViewModel.OffsiteDir);
+                    u.Analyze(ViewModel.PatchDir, ViewModel.OffsiteDir);
                     ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles); ;
                 });
                 btnRebuild.IsEnabled = true;
@@ -105,7 +105,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
         }
 
-        private async void ExportButton_Click(object sender, RoutedEventArgs e)
+        private async void UpdateButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -113,10 +113,24 @@ namespace OffsiteBackupOfflineSync.UI
                 btnStop.IsEnabled = true;
                 btnRebuild.IsEnabled = false;
                 ViewModel.Progress = 0;
+                ViewModel.Working = true;
+                string deletedDir = Path.Combine(ViewModel.OffsiteDir, Configs.Instance.Step3DeletedDir,
+                      DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
                 await Task.Run(() =>
                 {
-                    u.Update(ViewModel.OffsiteDir,Configs.Instance.Step3DeletedDir,ViewModel.DeleteMode);
+                    u.Update(ViewModel.OffsiteDir, deletedDir, ViewModel.DeleteMode);
+                    u.AnalyzeEmptyDirectories(ViewModel.OffsiteDir, ViewModel.DeleteMode);
                 });
+
+                if (u.DeletingDirectories.Any())
+                {
+                    if (await CommonDialog.ShowYesNoDialogAsync("删除空目录",
+                        $"有{u.DeletingDirectories.Count}个已不存在于本地的空目录，是否删除？",
+                        string.Join(Environment.NewLine, u.DeletingDirectories)))
+                    {
+                        u.DeleteEmptyDirectories(ViewModel.OffsiteDir, deletedDir, ViewModel.DeleteMode);
+                    }
+                }
             }
             catch (OperationCanceledException)
             {
@@ -132,8 +146,19 @@ namespace OffsiteBackupOfflineSync.UI
                 btnRebuild.IsEnabled = true;
                 btnStop.IsEnabled = false;
                 ViewModel.Message = "就绪";
+                ViewModel.Working = false;
                 ViewModel.Progress = ViewModel.ProgressMax;
             }
+        }
+
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.UpdateFiles?.ForEach(p => p.Checked = true);
+        }
+
+        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.UpdateFiles?.ForEach(p => p.Checked = false);
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
