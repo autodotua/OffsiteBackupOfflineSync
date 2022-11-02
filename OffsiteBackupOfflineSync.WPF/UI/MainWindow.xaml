@@ -29,6 +29,7 @@
                 IsSelected="True" />
             <ui:NavigationViewItem Content="第二步：本地制作补丁" />
             <ui:NavigationViewItem Content="第三步：异地更新" />
+            <ui:NavigationViewItem Content="稀疏文件树克隆" />
         </ui:NavigationView.MenuItems>
         <ui:Frame x:Name="frame" />
     </ui:NavigationView>

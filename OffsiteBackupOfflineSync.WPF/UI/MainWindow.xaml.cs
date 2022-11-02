@@ -28,19 +28,27 @@ namespace OffsiteBackupOfflineSync.UI
         private readonly Step1 step1 = new Step1();
         private readonly Step2 step2 = new Step2();
         private readonly Step3 step3 = new Step3();
+        private readonly CloneFileTree cloneFileTree = new  CloneFileTree();
         public MainWindow()
         {
             InitializeComponent();
             DataContext = ViewModel;
             var config = Configs.Instance;
             step1.ViewModel.Dir = config.Step1Dir;
+
             step2.ViewModel.OffsiteSnapshot = config.Step2OffsiteSnapshot;
             step2.ViewModel.LocalDir = config.Step2LocalDir;
             step2.ViewModel.BlackList = config.Step2BlackList;
             step2.ViewModel.BlackListUseRegex = config.Step2BlackListUseRegex;
+            step2.ViewModel.HardLink = config.Step2HardLink;
+
             step3.ViewModel.PatchDir = config.Step3PatchDir;
             step3.ViewModel.OffsiteDir = config.Step3OffsiteDir;
             step3.ViewModel.DeleteMode = config.Step3DeleteMode;
+
+            cloneFileTree.ViewModel.SourceDir = config.CloneFileTreeSourceDir;
+            cloneFileTree.ViewModel.DistDir = config.CloneFileTreeDistDir;
+
             frame.Navigate(step1);
         }
 
@@ -68,6 +76,10 @@ namespace OffsiteBackupOfflineSync.UI
                         frame.Navigate(step3);
                         ViewModel.NavigationViewHeader = "请使用异地磁盘完成这一步";
                         break;
+                    case 3:
+                        frame.Navigate(cloneFileTree);
+                        ViewModel.NavigationViewHeader = "工具";
+                        break;
                 }
             }
             SaveConfig();
@@ -77,13 +89,19 @@ namespace OffsiteBackupOfflineSync.UI
         {
             var config = Configs.Instance;
             config.Step1Dir = step1.ViewModel.Dir;
+
             config.Step2OffsiteSnapshot = step2.ViewModel.OffsiteSnapshot;
             config.Step2LocalDir = step2.ViewModel.LocalDir;
             config.Step2BlackList = step2.ViewModel.BlackList;
             config.Step2BlackListUseRegex = step2.ViewModel.BlackListUseRegex;
+            config.Step2HardLink = step2.ViewModel.HardLink;
+
             config.Step3PatchDir = step3.ViewModel.PatchDir;
             config.Step3OffsiteDir = step3.ViewModel.OffsiteDir;
             config.Step3DeleteMode = step3.ViewModel.DeleteMode;
+
+            config.CloneFileTreeSourceDir = cloneFileTree.ViewModel.SourceDir;
+            config.CloneFileTreeDistDir=cloneFileTree.ViewModel.DistDir;
 
             config.Save();
         }

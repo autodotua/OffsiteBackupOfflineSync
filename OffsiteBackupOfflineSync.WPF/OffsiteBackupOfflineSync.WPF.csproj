@@ -40,6 +40,9 @@
     <Compile Update="UI\Step1.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="UI\CloneFileTree.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="UI\Step3.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -50,6 +53,10 @@
 
   <ItemGroup>
     <Page Update="UI\Step1.xaml">
+      <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="UI\CloneFileTree.xaml">
       <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
       <SubType>Designer</SubType>
     </Page>

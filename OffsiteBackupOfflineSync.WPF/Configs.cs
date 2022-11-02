@@ -41,6 +41,9 @@ namespace OffsiteBackupOfflineSync
             }
         }
 
+        public string CloneFileTreeDistDir { get; set; }
+        public string CloneFileTreeSourceDir { get; set; }
+        public Dictionary<string, List<string>> SelectedDirectoriesHistory { get; set; } = new Dictionary<string, List<string>>();
         public string Step1Dir { get; set; }
         public string Step2BlackList { get; set; } = "Thumbs.db";
         public bool Step2BlackListUseRegex { get; set; }
@@ -48,9 +51,8 @@ namespace OffsiteBackupOfflineSync
         public string Step2OffsiteSnapshot { get; set; }
         public string Step3DeletedDir { get; set; } = "被删除和替换的文件备份";
         public DeleteMode Step3DeleteMode { get; set; } = DeleteMode.MoveToDeletedFolder;
+        public bool Step2HardLink { get; set; }
         public string Step3OffsiteDir { get; set; }
-        public Dictionary<string, List<string>> SelectedDirectoriesHistory { get; set; }=new Dictionary<string, List<string>>();
-
         public string Step3PatchDir { get; set; }
 
         public void Save(string path)
