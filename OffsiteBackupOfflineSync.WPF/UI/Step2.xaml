@@ -247,6 +247,8 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock
                 Width="360"
@@ -259,16 +261,21 @@
                 VerticalAlignment="Center"
                 Maximum="{Binding ProgressMax}"
                 Value="{Binding Progress}" />
+            <CheckBox
+                Grid.Column="4"
+                VerticalAlignment="Center"
+                Content="创建硬链接而不是复制"
+                IsChecked="{Binding HardLink}" />
             <Button
                 x:Name="btnStop"
-                Grid.Column="4"
+                Grid.Column="6"
                 Width="128"
                 Click="StopButton_Click"
                 Content="停止"
                 IsEnabled="False" />
             <Button
                 x:Name="btnPatch"
-                Grid.Column="6"
+                Grid.Column="8"
                 Width="128"
                 Click="ExportButton_Click"
                 Content="生成补丁"

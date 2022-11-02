@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 namespace OffsiteBackupOfflineSync.Utility
@@ -168,7 +169,7 @@ namespace OffsiteBackupOfflineSync.Utility
             }
         }
 
-        public void Export(string outputDir)
+        public void Export(string outputDir,bool hardLink)
         {
             stopping = false;
             if (!Directory.Exists(outputDir))
@@ -185,7 +186,16 @@ namespace OffsiteBackupOfflineSync.Utility
                     string name = Guid.NewGuid().ToString();
                     file.TempName = name;
                     InvokeMessageReceivedEvent($"正在复制 {file.Path}");
-                    File.Copy(Path.Combine(localDir, file.Path), Path.Combine(outputDir, name));
+                    string sourceFile = Path.Combine(localDir, file.Path);
+                    string distFile = Path.Combine(outputDir, name);
+                    if (hardLink)
+                    {
+                        CreateHardLink(distFile, sourceFile);
+                    }
+                    else
+                    {
+                        File.Copy(sourceFile, distFile);
+                    }
                     InvokeProgressReceivedEvent(length += file.Length, totalLength);
                 }
                 file.Complete = true;
@@ -203,6 +213,33 @@ namespace OffsiteBackupOfflineSync.Utility
 
             var json = JsonConvert.SerializeObject(model, Formatting.Indented);
             File.WriteAllText(Path.Combine(outputDir, "file.obos2"), json);
+        }
+
+        [DllImport("Kernel32.dll", CharSet = CharSet.Unicode)]
+        private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
+
+        private void CreateHardLink(string link, string source)
+        {
+            if (!File.Exists(source))
+            {
+                throw new FileNotFoundException(source);
+            }
+
+            if (File.Exists(link))
+            {
+                File.Delete(link);
+            }
+
+            if (Path.GetPathRoot(link) != Path.GetPathRoot(source))
+            {
+                throw new IOException("硬链接的两者必须在同一个分区中");
+            }
+
+            bool value = CreateHardLink(link, source, IntPtr.Zero);
+            if (!value)
+            {
+                throw new IOException("未知错误，无法创建硬链接");
+            }
         }
     }
 

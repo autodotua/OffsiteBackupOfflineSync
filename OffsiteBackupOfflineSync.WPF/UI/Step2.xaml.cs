@@ -75,7 +75,7 @@ namespace OffsiteBackupOfflineSync.UI
                     ViewModel.Progress = 0;
                     await Task.Run(() =>
                     {
-                        u.Export(outputDir);
+                        u.Export(outputDir,ViewModel.HardLink);
                     });
                 }
                 catch (OperationCanceledException)
@@ -195,6 +195,14 @@ namespace OffsiteBackupOfflineSync.UI
             get => offsiteSnapshot;
             set => this.SetValueAndNotify(ref offsiteSnapshot, value, nameof(OffsiteSnapshot));
         }
+
+        private bool hardLink;
+        public bool HardLink
+        {
+            get => hardLink;
+            set => this.SetValueAndNotify(ref hardLink, value, nameof(HardLink));
+        }
+
     }
 
 }
