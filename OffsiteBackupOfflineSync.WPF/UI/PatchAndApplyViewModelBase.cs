@@ -5,13 +5,14 @@ using System.Collections.ObjectModel;
 
 namespace OffsiteBackupOfflineSync.UI
 {
-    public class PatchAndApplyViewModelBase : INotifyPropertyChanged
+    public class ViewModelBase : INotifyPropertyChanged
     {
         private string message = "就绪";
         private double progress;
+        private bool progressIndeterminate;
         private double progressMax;
-
         private ObservableCollection<SyncFile> updateFiles;
+
         private bool working;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -25,12 +26,19 @@ namespace OffsiteBackupOfflineSync.UI
             get => message;
             set => this.SetValueAndNotify(ref message, value, nameof(Message));
         }
-        public long ModifiedFileLength => UpdateFiles?.Where(p => p.UpdateType == FileUpdateType.Modify&&p.Checked)?.Sum(p => p.Length) ?? 0;
+
+        public long ModifiedFileLength => UpdateFiles?.Where(p => p.UpdateType == FileUpdateType.Modify && p.Checked)?.Sum(p => p.Length) ?? 0;
 
         public double Progress
         {
             get => progress;
             set => this.SetValueAndNotify(ref progress, value, nameof(Progress));
+        }
+
+        public bool ProgressIndeterminate
+        {
+            get => progressIndeterminate;
+            set => this.SetValueAndNotify(ref progressIndeterminate, value, nameof(ProgressIndeterminate));
         }
         public double ProgressMax
         {

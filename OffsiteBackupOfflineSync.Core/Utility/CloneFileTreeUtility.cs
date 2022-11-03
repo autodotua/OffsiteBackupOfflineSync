@@ -16,9 +16,14 @@ namespace OffsiteBackupOfflineSync.Utility
         public string SourceDir { get; private set; }
         public void CloneFiles(string distDir)
         {
+            stopping = false;
             int index = 0;
             foreach (var file in Files)
             {
+                if (stopping)
+                {
+                    throw new OperationCanceledException();
+                }
                 string relativePath = Path.GetRelativePath(SourceDir, file.Path);
                 string newPath = Path.Combine(distDir, relativePath);
                 FileInfo newFile = new FileInfo(newPath);
@@ -45,6 +50,7 @@ namespace OffsiteBackupOfflineSync.Utility
 
         public void EnumerateAllFiles(string dir)
         {
+            stopping=false;
             SourceDir = dir;
             var fileInfos = new DirectoryInfo(dir)
              .EnumerateFiles("*", new EnumerationOptions()
@@ -54,9 +60,12 @@ namespace OffsiteBackupOfflineSync.Utility
                  RecurseSubdirectories = true,
              });
             List<SyncFile> files = new List<SyncFile>();
-            int index = 0;
             foreach (var file in fileInfos)
             {
+                if (stopping)
+                {
+                    throw new OperationCanceledException();
+                }
                 InvokeMessageReceivedEvent($"正在处理 {Path.GetRelativePath(dir,file.FullName)}");
                 files.Add(new SyncFile()
                 {

@@ -28,7 +28,7 @@ namespace OffsiteBackupOfflineSync.UI
         private readonly Step1 step1 = new Step1();
         private readonly Step2 step2 = new Step2();
         private readonly Step3 step3 = new Step3();
-        private readonly CloneFileTree cloneFileTree = new  CloneFileTree();
+        private readonly CloneFileTree cloneFileTree = new CloneFileTree();
         public MainWindow()
         {
             InitializeComponent();
@@ -60,7 +60,7 @@ namespace OffsiteBackupOfflineSync.UI
                 frame.Navigate(typeof(AboutPage));
                 ViewModel.NavigationViewHeader = Title;
             }
-            else
+            else if (sender.MenuItems.Contains(args.SelectedItem))
             {
                 switch (sender.MenuItems.IndexOf(args.SelectedItem))
                 {
@@ -76,7 +76,13 @@ namespace OffsiteBackupOfflineSync.UI
                         frame.Navigate(step3);
                         ViewModel.NavigationViewHeader = "请使用异地磁盘完成这一步";
                         break;
-                    case 3:
+                }
+            }
+            else
+            {
+                switch (sender.FooterMenuItems.IndexOf(args.SelectedItem))
+                {
+                    case 0:
                         frame.Navigate(cloneFileTree);
                         ViewModel.NavigationViewHeader = "工具";
                         break;
@@ -101,7 +107,7 @@ namespace OffsiteBackupOfflineSync.UI
             config.Step3DeleteMode = step3.ViewModel.DeleteMode;
 
             config.CloneFileTreeSourceDir = cloneFileTree.ViewModel.SourceDir;
-            config.CloneFileTreeDistDir=cloneFileTree.ViewModel.DistDir;
+            config.CloneFileTreeDistDir = cloneFileTree.ViewModel.DistDir;
 
             config.Save();
         }

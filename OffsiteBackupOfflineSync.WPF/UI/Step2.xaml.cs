@@ -166,7 +166,7 @@ namespace OffsiteBackupOfflineSync.UI
             u.Stop();
         }
     }
-    public class Step2ViewModel : PatchAndApplyViewModelBase
+    public class Step2ViewModel : ViewModelBase
     {
         private string blackList;
         private bool blackListUseRegex;

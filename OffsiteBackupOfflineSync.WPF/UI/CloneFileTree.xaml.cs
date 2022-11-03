@@ -66,14 +66,20 @@ namespace OffsiteBackupOfflineSync.UI
             try
             {
                 btnCreate.IsEnabled = false;
+                btnStop.IsEnabled = true;
                 ViewModel.Message = "正在分析";
                 ViewModel.Working = true;
+                ViewModel.ProgressIndeterminate = true;
                 await Task.Run(() =>
                 {
                     u.EnumerateAllFiles(ViewModel.SourceDir);
                     ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.Files); ;
                 });
                 btnCreate.IsEnabled = true;
+            }
+            catch (OperationCanceledException)
+            {
+
             }
             catch (Exception ex)
             {
@@ -83,6 +89,8 @@ namespace OffsiteBackupOfflineSync.UI
             {
                 ViewModel.Message = "就绪";
                 ViewModel.Working = false;
+                ViewModel.ProgressIndeterminate = false;
+                btnStop.IsEnabled = false;
             }
         }
 
@@ -157,7 +165,7 @@ namespace OffsiteBackupOfflineSync.UI
     }
 
 
-    public class CloneFileTreeViewModel :PatchAndApplyViewModelBase
+    public class CloneFileTreeViewModel :ViewModelBase
     {
         private string sourceDir;
         private string distDir;

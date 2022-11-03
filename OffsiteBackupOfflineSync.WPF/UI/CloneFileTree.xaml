@@ -141,7 +141,7 @@
                         Header="大小"
                         IsReadOnly="True" />
 
-                 
+
 
                 </DataGrid.Columns>
             </DataGrid>
@@ -181,6 +181,7 @@
             <ProgressBar
                 Grid.Column="2"
                 VerticalAlignment="Center"
+                IsIndeterminate="{Binding ProgressIndeterminate}"
                 Maximum="{Binding ProgressMax}"
                 Value="{Binding Progress}" />
 

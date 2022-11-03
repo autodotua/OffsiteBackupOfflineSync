@@ -169,7 +169,7 @@ namespace OffsiteBackupOfflineSync.UI
     }
 
 
-    public class Step3ViewModel : PatchAndApplyViewModelBase
+    public class Step3ViewModel : ViewModelBase
     {
         private DeleteMode deleteMode = DeleteMode.MoveToDeletedFolder;
         private string offsiteDir;
