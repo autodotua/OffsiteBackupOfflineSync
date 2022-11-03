@@ -166,7 +166,7 @@ namespace OffsiteBackupOfflineSync.UI
     }
 
 
-    public class FilesGoHomeViewModel :ViewModelBase<FilesGoHomeFile>
+    public class FilesGoHomeViewModel :ViewModelBase<GoHomeFile>
     {
         private string destDir;
         private string filter;
@@ -208,6 +208,20 @@ namespace OffsiteBackupOfflineSync.UI
         {
             get => templateDir;
             set => this.SetValueAndNotify(ref templateDir, value, nameof(TemplateDir));
+        }
+        private string blackList;
+        private bool blackListUseRegex;
+
+        public string BlackList
+        {
+            get => blackList;
+            set => this.SetValueAndNotify(ref blackList, value, nameof(BlackList));
+        }
+
+        public bool BlackListUseRegex
+        {
+            get => blackListUseRegex;
+            set => this.SetValueAndNotify(ref blackListUseRegex, value, nameof(BlackListUseRegex));
         }
     }
 

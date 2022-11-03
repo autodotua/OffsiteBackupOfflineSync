@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 namespace OffsiteBackupOfflineSync.Model
 {
     [DebuggerDisplay("{Name}")]
-    public abstract class FileBase: INotifyPropertyChanged
+    public class FileBase : INotifyPropertyChanged
     {
         private bool complete;
         private string message;

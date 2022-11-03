@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
@@ -89,6 +90,58 @@ namespace OffsiteBackupOfflineSync.Utility
                 }
                 throw;
             }
+        }
+
+        /// <summary>
+        /// 文件是否在黑名单中
+        /// </summary>
+        /// <param name="name">文件名</param>
+        /// <param name="path">文件路径</param>
+        /// <param name="balckList">黑名单列表</param>
+        /// <param name="blackRegexs">黑名单正则列表</param>
+        /// <param name="blackListUseRegex">是否启用正则</param>
+        /// <returns></returns>
+        protected bool IsInBlackList(string name, string path, IList<string> balckList, IList<Regex> blackRegexs, bool blackListUseRegex)
+        {
+            for (int i = 0; i < balckList.Count; i++)
+            {
+                if (blackListUseRegex) //正则
+                {
+                    if (balckList[i].Contains('\\') || balckList[i].Contains('/')) //目录
+                    {
+                        if (blackRegexs[i].IsMatch(path))
+                        {
+                            return true;
+                        }
+                    }
+                    else //文件
+                    {
+                        if (blackRegexs[i].IsMatch(name))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    if (balckList[i].Contains('\\') || balckList[i].Contains('/')) //目录
+                    {
+                        if (path.Contains(balckList[i]))
+                        {
+                            return true;
+                        }
+                    }
+                    else //文件
+                    {
+
+                        if (name.Contains(balckList[i]))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
     }
