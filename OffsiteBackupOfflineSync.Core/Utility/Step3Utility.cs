@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
-    public class Step3Utility : SyncUtilityBase
+    public class Step3Utility : UtilityBase
     {
         public List<SyncFile> UpdateFiles { get; private set; }
         public List<string> LocalDirectories { get; private set; }

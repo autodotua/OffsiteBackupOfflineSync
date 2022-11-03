@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
-    public class Step1Utility : SyncUtilityBase
+    public class Step1Utility : UtilityBase
     {
         private volatile int index = 0;
         public void Enumerate(IEnumerable<string> dirs, string jsonPath)

@@ -79,7 +79,7 @@
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 CanUserReorderColumns="True"
-                ItemsSource="{Binding UpdateFiles}">
+                ItemsSource="{Binding Files}">
                 <DataGrid.Resources>
                     <Style
                         x:Key="DataGridCheckBoxColumnTextWrappingStyle"

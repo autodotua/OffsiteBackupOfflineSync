@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
-    public class Step2Utility : SyncUtilityBase
+    public class Step2Utility : UtilityBase
     {
         public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
         public List<string> LocalDirectories { get; } = new List<string>();
@@ -187,14 +187,14 @@ namespace OffsiteBackupOfflineSync.Utility
                     file.TempName = name;
                     InvokeMessageReceivedEvent($"正在复制 {file.Path}");
                     string sourceFile = Path.Combine(localDir, file.Path);
-                    string distFile = Path.Combine(outputDir, name);
+                    string destFile = Path.Combine(outputDir, name);
                     if (hardLink)
                     {
-                        CreateHardLink(distFile, sourceFile);
+                        CreateHardLink(destFile, sourceFile);
                     }
                     else
                     {
-                        File.Copy(sourceFile, distFile);
+                        File.Copy(sourceFile, destFile);
                     }
                     InvokeProgressReceivedEvent(length += file.Length, totalLength);
                 }

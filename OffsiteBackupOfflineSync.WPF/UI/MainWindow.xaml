@@ -31,7 +31,8 @@
             <ui:NavigationViewItem Content="第三步：异地更新" />
         </ui:NavigationView.MenuItems>
         <ui:NavigationView.FooterMenuItems>
-            <ui:NavigationViewItem Content="稀疏文件树克隆" />
+            <ui:NavigationViewItem Content="文件结构克隆" />
+            <ui:NavigationViewItem Content="文件归位" />
             
         </ui:NavigationView.FooterMenuItems>
         <ui:Frame x:Name="frame" />

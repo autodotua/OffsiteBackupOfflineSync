@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using FzLib;
@@ -10,14 +10,10 @@ using Newtonsoft.Json;
 
 namespace OffsiteBackupOfflineSync.Model
 {
-    [DebuggerDisplay("{Name}")]
-    public class SyncFile : INotifyPropertyChanged
+    public class SyncFile : FileBase
     {
         private bool isChecked = true;
 
-        private bool complete;
-
-        private string message;
 
         public SyncFile()
         {
@@ -30,7 +26,6 @@ namespace OffsiteBackupOfflineSync.Model
             LastWriteTime = file.LastWriteTime;
             Length = file.Length;
         }
-        public event PropertyChangedEventHandler PropertyChanged;
         [JsonIgnore]
         public bool Checked
         {
@@ -38,24 +33,7 @@ namespace OffsiteBackupOfflineSync.Model
             set => this.SetValueAndNotify(ref isChecked, value, nameof(Checked));
         }
 
-        [JsonIgnore]
-        public bool Complete
-        {
-            get => complete;
-            set => this.SetValueAndNotify(ref complete, value, nameof(Complete));
-        }
 
-        public DateTime LastWriteTime { get; set; }
-        public long Length { get; set; }
-        [JsonIgnore]
-        public string Message
-        {
-            get => message;
-            set => this.SetValueAndNotify(ref message, value, nameof(Message));
-        }
-
-        public string Name { get; set; }
-        public string Path { get; set; }
         public string TempName { get; set; }
         public FileUpdateType UpdateType { get; set; }
     }

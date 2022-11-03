@@ -10,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
-    public class CloneFileTreeUtility : SyncUtilityBase
+    public class CloneFileTreeUtility : UtilityBase
     {
-        public SyncFile[] Files { get; private set; }
+        public FileTreeFile[] Files { get; private set; }
         public string SourceDir { get; private set; }
-        public void CloneFiles(string distDir)
+        public void CloneFiles(string destDir)
         {
             stopping = false;
             int index = 0;
@@ -25,7 +25,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     throw new OperationCanceledException();
                 }
                 string relativePath = Path.GetRelativePath(SourceDir, file.Path);
-                string newPath = Path.Combine(distDir, relativePath);
+                string newPath = Path.Combine(destDir, relativePath);
                 FileInfo newFile = new FileInfo(newPath);
                 if (!newFile.Directory.Exists)
                 {
@@ -59,7 +59,7 @@ namespace OffsiteBackupOfflineSync.Utility
                  AttributesToSkip = 0,
                  RecurseSubdirectories = true,
              });
-            List<SyncFile> files = new List<SyncFile>();
+            List<FileTreeFile> files = new List<FileTreeFile>();
             foreach (var file in fileInfos)
             {
                 if (stopping)
@@ -67,13 +67,12 @@ namespace OffsiteBackupOfflineSync.Utility
                     throw new OperationCanceledException();
                 }
                 InvokeMessageReceivedEvent($"正在处理 {Path.GetRelativePath(dir,file.FullName)}");
-                files.Add(new SyncFile()
+                files.Add(new FileTreeFile()
                 {
                     Name = file.Name,
                     Path = file.FullName,
                     LastWriteTime = file.LastWriteTime,
                     Length = file.Length,
-                    Checked = true,
                 });
             }
             Files = files.ToArray();

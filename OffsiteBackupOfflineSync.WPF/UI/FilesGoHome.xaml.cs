@@ -18,10 +18,10 @@ namespace OffsiteBackupOfflineSync.UI
     /// <summary>
     /// RebuildPanel.xaml 的交互逻辑
     /// </summary>
-    public partial class CloneFileTree : UserControl
+    public partial class FilesGoHome : UserControl
     {
-        private readonly CloneFileTreeUtility u = new CloneFileTreeUtility();
-        public CloneFileTree(CloneFileTreeViewModel viewModel)
+        private readonly FilesGoHomeUtility u = new FilesGoHomeUtility();
+        public FilesGoHome(FilesGoHomeViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = ViewModel;
@@ -39,7 +39,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Progress = e.Value;
             };
         }
-        public CloneFileTreeViewModel ViewModel { get; }
+        public FilesGoHomeViewModel ViewModel { get; } 
 
 
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
@@ -73,8 +73,8 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.ProgressIndeterminate = true;
                 await Task.Run(() =>
                 {
-                    u.EnumerateAllFiles(ViewModel.SourceDir);
-                    ViewModel.Files = new ObservableCollection<FileTreeFile>(u.Files); ;
+                 
+
                 });
                 btnCreate.IsEnabled = true;
             }
@@ -125,7 +125,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Working = true;
                 await Task.Run(() =>
                 {
-                    u.CloneFiles(ViewModel.DestDir);
+
                 });
 
             }
@@ -148,6 +148,16 @@ namespace OffsiteBackupOfflineSync.UI
             }
         }
 
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Files?.ForEach(p => p.Checked = true);
+        }
+
+        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Files?.ForEach(p => p.Checked = false);
+        }
+
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
             btnStop.IsEnabled = false;
@@ -156,20 +166,48 @@ namespace OffsiteBackupOfflineSync.UI
     }
 
 
-    public class CloneFileTreeViewModel :ViewModelBase<FileTreeFile>
+    public class FilesGoHomeViewModel :ViewModelBase<FilesGoHomeFile>
     {
-        private string sourceDir;
         private string destDir;
+        private string filter;
+        private bool filterIncludePath;
+        private bool filterReverse;
+        private string sourceDir;
+        private string templateDir;
+        public string DestDir
+        {
+            get => destDir;
+            set => this.SetValueAndNotify(ref destDir, value, nameof(DestDir));
+        }
+
+        public string Filter
+        {
+            get => filter;
+            set => this.SetValueAndNotify(ref filter, value, nameof(Filter));
+        }
+
+        public bool FilterIncludePath
+        {
+            get => filterIncludePath;
+            set => this.SetValueAndNotify(ref filterIncludePath, value, nameof(FilterIncludePath));
+        }
+
+        public bool FilterReverse
+        {
+            get => filterReverse;
+            set => this.SetValueAndNotify(ref filterReverse, value, nameof(FilterReverse));
+        }
 
         public string SourceDir
         {
             get => sourceDir;
             set => this.SetValueAndNotify(ref sourceDir, value, nameof(SourceDir));
         }
-        public string DestDir
+
+        public string TemplateDir
         {
-            get => destDir;
-            set => this.SetValueAndNotify(ref destDir, value, nameof(DestDir));
+            get => templateDir;
+            set => this.SetValueAndNotify(ref templateDir, value, nameof(TemplateDir));
         }
     }
 

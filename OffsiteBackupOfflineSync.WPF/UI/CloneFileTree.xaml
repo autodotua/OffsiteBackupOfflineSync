@@ -56,10 +56,10 @@
                     Text="目标目录：" />
                 <TextBox
                     Grid.Column="2"
-                    Text="{Binding DistDir}" />
+                    Text="{Binding DestDir}" />
                 <Button
                     Grid.Column="4"
-                    Click="BrowseDistDirButton_Click"
+                    Click="BrowseDestDirButton_Click"
                     Content="浏览" />
             </Grid>
             <Grid HorizontalAlignment="Right">
@@ -79,7 +79,7 @@
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 CanUserReorderColumns="True"
-                ItemsSource="{Binding UpdateFiles}">
+                ItemsSource="{Binding Files}">
                 <DataGrid.Resources>
                     <Style
                         x:Key="DataGridCheckBoxColumnTextWrappingStyle"

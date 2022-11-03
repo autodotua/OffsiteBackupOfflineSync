@@ -21,8 +21,9 @@ namespace OffsiteBackupOfflineSync.UI
     public partial class Step3 : UserControl
     {
         private readonly Step3Utility u = new Step3Utility();
-        public Step3()
+        public Step3(Step3ViewModel viewModel)
         {
+            ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
             u.MessageReceived += (s, e) =>
@@ -38,7 +39,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Progress = e.Value;
             };
         }
-        public Step3ViewModel ViewModel { get; } = new Step3ViewModel();
+        public Step3ViewModel ViewModel { get; } 
 
 
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
@@ -71,7 +72,7 @@ namespace OffsiteBackupOfflineSync.UI
                 await Task.Run(() =>
                 {
                     u.Analyze(ViewModel.PatchDir, ViewModel.OffsiteDir);
-                    ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles); ;
+                    ViewModel.Files = new ObservableCollection<SyncFile>(u.UpdateFiles); ;
                 });
                 btnRebuild.IsEnabled = true;
             }
@@ -114,7 +115,7 @@ namespace OffsiteBackupOfflineSync.UI
                 btnRebuild.IsEnabled = false;
                 ViewModel.Progress = 0;
                 ViewModel.Working = true;
-                string deletedDir = Path.Combine(ViewModel.OffsiteDir, Configs.Instance.Step3DeletedDir,
+                string deletedDir = Path.Combine(ViewModel.OffsiteDir, ViewModel.DeletedDir,
                       DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
                 await Task.Run(() =>
                 {
@@ -153,12 +154,12 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void SelectAllButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.UpdateFiles?.ForEach(p => p.Checked = true);
+            ViewModel.Files?.ForEach(p => p.Checked = true);
         }
 
         private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.UpdateFiles?.ForEach(p => p.Checked = false);
+            ViewModel.Files?.ForEach(p => p.Checked = false);
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
@@ -169,12 +170,12 @@ namespace OffsiteBackupOfflineSync.UI
     }
 
 
-    public class Step3ViewModel : ViewModelBase
+    public class Step3ViewModel : ViewModelBase<SyncFile>
     {
         private DeleteMode deleteMode = DeleteMode.MoveToDeletedFolder;
         private string offsiteDir;
         private string patchDir;
-
+        public string DeletedDir { get; set; } = "被删除和替换的文件备份";
         public DeleteMode DeleteMode
         {
             get => deleteMode;

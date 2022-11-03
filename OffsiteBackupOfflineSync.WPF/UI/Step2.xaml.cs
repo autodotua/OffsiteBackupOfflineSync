@@ -20,8 +20,9 @@ namespace OffsiteBackupOfflineSync.UI
     public partial class Step2 : UserControl
     {
         private readonly Step2Utility u = new Step2Utility();
-        public Step2()
+        public Step2(Step2ViewModel viewModel)
         {
+            ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
             u.MessageReceived += (s, e) =>
@@ -37,7 +38,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.Progress = e.Value;
             };
         }
-        public Step2ViewModel ViewModel { get; } = new Step2ViewModel();
+        public Step2ViewModel ViewModel { get; } 
 
         private void BrowseLocalDirButton_Click(object sender, RoutedEventArgs e)
         {
@@ -59,7 +60,7 @@ namespace OffsiteBackupOfflineSync.UI
 
         private async void ExportButton_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewModel.UpdateFiles.Count == 0)
+            if (ViewModel.Files.Count == 0)
             {
                 await CommonDialog.ShowErrorDialogAsync("本地和异地没有差异");
             }
@@ -128,9 +129,9 @@ namespace OffsiteBackupOfflineSync.UI
                 await Task.Run(() =>
                 {
                     u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot, ViewModel.BlackList, ViewModel.BlackListUseRegex, Configs.MaxTimeTolerance);
-                    ViewModel.UpdateFiles = new ObservableCollection<SyncFile>(u.UpdateFiles);
+                    ViewModel.Files = new ObservableCollection<SyncFile>(u.UpdateFiles);
                 });
-                if (ViewModel.UpdateFiles.Count == 0)
+                if (ViewModel.Files.Count == 0)
                 {
                     await CommonDialog.ShowOkDialogAsync("查找完成", "本地和异地没有差异");
                 }
@@ -152,12 +153,12 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void SelectAllButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.UpdateFiles?.ForEach(p => p.Checked = true);
+            ViewModel.Files?.ForEach(p => p.Checked = true);
         }
 
         private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.UpdateFiles?.ForEach(p => p.Checked = false);
+            ViewModel.Files?.ForEach(p => p.Checked = false);
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
@@ -166,10 +167,11 @@ namespace OffsiteBackupOfflineSync.UI
             u.Stop();
         }
     }
-    public class Step2ViewModel : ViewModelBase
+    public class Step2ViewModel : ViewModelBase<SyncFile>
     {
         private string blackList;
         private bool blackListUseRegex;
+        private bool hardLink;
         private string localDir;
         private string offsiteSnapshot;
         public string BlackList
@@ -184,6 +186,12 @@ namespace OffsiteBackupOfflineSync.UI
             set => this.SetValueAndNotify(ref blackListUseRegex, value, nameof(BlackListUseRegex));
         }
 
+        public bool HardLink
+        {
+            get => hardLink;
+            set => this.SetValueAndNotify(ref hardLink, value, nameof(HardLink));
+        }
+
         public string LocalDir
         {
             get => localDir;
@@ -195,14 +203,6 @@ namespace OffsiteBackupOfflineSync.UI
             get => offsiteSnapshot;
             set => this.SetValueAndNotify(ref offsiteSnapshot, value, nameof(OffsiteSnapshot));
         }
-
-        private bool hardLink;
-        public bool HardLink
-        {
-            get => hardLink;
-            set => this.SetValueAndNotify(ref hardLink, value, nameof(HardLink));
-        }
-
     }
 
 }

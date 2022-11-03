@@ -25,29 +25,22 @@ namespace OffsiteBackupOfflineSync.UI
 {
     public partial class MainWindow : Window
     {
-        private readonly Step1 step1 = new Step1();
-        private readonly Step2 step2 = new Step2();
-        private readonly Step3 step3 = new Step3();
-        private readonly CloneFileTree cloneFileTree = new CloneFileTree();
+        private readonly Step1 step1;
+        private readonly Step2 step2;
+        private readonly Step3 step3;
+        private readonly CloneFileTree cloneFileTree;
+        private readonly FilesGoHome filesGoHome;
         public MainWindow()
         {
             InitializeComponent();
             DataContext = ViewModel;
             var config = Configs.Instance;
-            step1.ViewModel.Dir = config.Step1Dir;
 
-            step2.ViewModel.OffsiteSnapshot = config.Step2OffsiteSnapshot;
-            step2.ViewModel.LocalDir = config.Step2LocalDir;
-            step2.ViewModel.BlackList = config.Step2BlackList;
-            step2.ViewModel.BlackListUseRegex = config.Step2BlackListUseRegex;
-            step2.ViewModel.HardLink = config.Step2HardLink;
-
-            step3.ViewModel.PatchDir = config.Step3PatchDir;
-            step3.ViewModel.OffsiteDir = config.Step3OffsiteDir;
-            step3.ViewModel.DeleteMode = config.Step3DeleteMode;
-
-            cloneFileTree.ViewModel.SourceDir = config.CloneFileTreeSourceDir;
-            cloneFileTree.ViewModel.DistDir = config.CloneFileTreeDistDir;
+            step1 = new Step1(config.Step1);
+            step2 = new Step2(config.Step2);
+            step3=new  Step3(config.Step3);
+            cloneFileTree = new CloneFileTree(config.CloneFileTree);
+            filesGoHome = new FilesGoHome(config.FilesGoHome);
 
             frame.Navigate(step1);
         }
@@ -84,7 +77,11 @@ namespace OffsiteBackupOfflineSync.UI
                 {
                     case 0:
                         frame.Navigate(cloneFileTree);
-                        ViewModel.NavigationViewHeader = "工具";
+                        ViewModel.NavigationViewHeader = "创建保留文件大小和修改时间，但不占用空间的文件结构";
+                        break;
+                    case 1:
+                        frame.Navigate(filesGoHome);
+                        ViewModel.NavigationViewHeader = "将源目录中的文件结构匹配为模板目录中的文件结构";
                         break;
                 }
             }
@@ -94,20 +91,7 @@ namespace OffsiteBackupOfflineSync.UI
         private void SaveConfig()
         {
             var config = Configs.Instance;
-            config.Step1Dir = step1.ViewModel.Dir;
-
-            config.Step2OffsiteSnapshot = step2.ViewModel.OffsiteSnapshot;
-            config.Step2LocalDir = step2.ViewModel.LocalDir;
-            config.Step2BlackList = step2.ViewModel.BlackList;
-            config.Step2BlackListUseRegex = step2.ViewModel.BlackListUseRegex;
-            config.Step2HardLink = step2.ViewModel.HardLink;
-
-            config.Step3PatchDir = step3.ViewModel.PatchDir;
-            config.Step3OffsiteDir = step3.ViewModel.OffsiteDir;
-            config.Step3DeleteMode = step3.ViewModel.DeleteMode;
-
-            config.CloneFileTreeSourceDir = cloneFileTree.ViewModel.SourceDir;
-            config.CloneFileTreeDistDir = cloneFileTree.ViewModel.DistDir;
+          
 
             config.Save();
         }

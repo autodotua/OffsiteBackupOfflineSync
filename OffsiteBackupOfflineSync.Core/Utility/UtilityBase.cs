@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
-    public class SyncUtilityBase
+    public class UtilityBase
     {
         /// <summary>
         /// 已经收到停止导出信号

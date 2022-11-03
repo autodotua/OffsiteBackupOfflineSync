@@ -1,6 +1,7 @@
 ﻿using FzLib.DataStorage.Serialization;
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
+using OffsiteBackupOfflineSync.UI;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,23 +38,20 @@ namespace OffsiteBackupOfflineSync
 
                     }
                 }
+                instance.Step1 = instance.Step1 ?? new Step1ViewModel();
+                instance.Step2 = instance.Step2 ?? new Step2ViewModel();
+                instance.Step3 = instance.Step3 ?? new Step3ViewModel();
+                instance.CloneFileTree = instance.CloneFileTree ?? new CloneFileTreeViewModel();
+                instance.FilesGoHome = instance.FilesGoHome ?? new FilesGoHomeViewModel();
                 return instance;
             }
         }
 
-        public string CloneFileTreeDistDir { get; set; }
-        public string CloneFileTreeSourceDir { get; set; }
-        public Dictionary<string, List<string>> SelectedDirectoriesHistory { get; set; } = new Dictionary<string, List<string>>();
-        public string Step1Dir { get; set; }
-        public string Step2BlackList { get; set; } = "Thumbs.db";
-        public bool Step2BlackListUseRegex { get; set; }
-        public string Step2LocalDir { get; set; }
-        public string Step2OffsiteSnapshot { get; set; }
-        public string Step3DeletedDir { get; set; } = "被删除和替换的文件备份";
-        public DeleteMode Step3DeleteMode { get; set; } = DeleteMode.MoveToDeletedFolder;
-        public bool Step2HardLink { get; set; }
-        public string Step3OffsiteDir { get; set; }
-        public string Step3PatchDir { get; set; }
+        public Step1ViewModel Step1 { get; set; }
+        public Step2ViewModel Step2 { get; set; }
+        public Step3ViewModel Step3 { get; set; }
+        public CloneFileTreeViewModel CloneFileTree { get; set; }
+        public FilesGoHomeViewModel FilesGoHome { get; set; }
 
         public void Save(string path)
         {

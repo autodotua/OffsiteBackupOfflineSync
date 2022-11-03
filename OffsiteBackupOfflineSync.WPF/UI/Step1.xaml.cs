@@ -24,8 +24,9 @@ namespace OffsiteBackupOfflineSync.UI
     public partial class Step1 : UserControl
     {
         private readonly Step1Utility u = new Step1Utility();
-        public Step1()
+        public Step1(Step1ViewModel viewModel)
         {
+            ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
@@ -33,10 +34,11 @@ namespace OffsiteBackupOfflineSync.UI
             {
                 ViewModel.Message = e.Message;
             };
+            ViewModel.Dirs = ViewModel.Dirs;
 
         }
 
-        public Step1ViewModel ViewModel { get; } = new Step1ViewModel();
+        public Step1ViewModel ViewModel { get; }
 
         private void BrowseDirButton_Click(object sender, RoutedEventArgs e)
         {
@@ -57,7 +59,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             string name = $"{DateTime.Now:yyyyMMdd}-";
             name += GetVolumeName(name);
-            Configs.Instance.SelectedDirectoriesHistory.AddOrSetValue(ViewModel.Dir, dirs);
+            ViewModel.SelectedDirectoriesHistory.AddOrSetValue(ViewModel.Dir, dirs);
             string path = new FileFilterCollection().Add("异地备份快照", "obos1")
                 .CreateSaveFileDialog()
                 .SetDefault(name)
@@ -125,9 +127,9 @@ namespace OffsiteBackupOfflineSync.UI
                     lst.SelectedItems.Clear();
                     if (!string.IsNullOrEmpty(ViewModel.Dir))
                     {
-                        if (Configs.Instance.SelectedDirectoriesHistory.ContainsKey(ViewModel.Dir))
+                        if (ViewModel.SelectedDirectoriesHistory.ContainsKey(ViewModel.Dir))
                         {
-                            foreach (var item in Configs.Instance.SelectedDirectoriesHistory[ViewModel.Dir])
+                            foreach (var item in ViewModel.SelectedDirectoriesHistory[ViewModel.Dir])
                             {
                                 if (ViewModel.Dirs.Contains(item))
                                 {
@@ -146,13 +148,10 @@ namespace OffsiteBackupOfflineSync.UI
     }
 
 
-    public class Step1ViewModel : INotifyPropertyChanged
+    public class Step1ViewModel : ViewModelBase<FileBase>
     {
         private string dir;
         private List<string> dirs = new List<string>();
-        private string message = "就绪";
-        private bool working;
-        public event PropertyChangedEventHandler PropertyChanged;
 
         public string Dir
         {
@@ -173,23 +172,14 @@ namespace OffsiteBackupOfflineSync.UI
                 }
             }
         }
-
+        [JsonIgnore]
         public List<string> Dirs
         {
             get => dirs;
             set => this.SetValueAndNotify(ref dirs, value, nameof(Dirs));
         }
 
-        public string Message
-        {
-            get => message;
-            set => this.SetValueAndNotify(ref message, value, nameof(Message));
-        }
-        public bool Working
-        {
-            get => working;
-            set => this.SetValueAndNotify(ref working, value, nameof(Working));
-        }
+        public Dictionary<string, List<string>> SelectedDirectoriesHistory { get; set; } = new Dictionary<string, List<string>>();
     }
 
 }
