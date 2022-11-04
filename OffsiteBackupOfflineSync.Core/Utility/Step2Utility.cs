@@ -27,7 +27,7 @@ namespace OffsiteBackupOfflineSync.Utility
             UpdateFiles.Clear();
             LocalDirectories.Clear();
             index = 0;
-            string[] blacks = blackList.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+            string[] blacks = blackList?.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>(); ;
             List<Regex> blackRegexs = blacks.Select(p => new Regex(p, RegexOptions.IgnoreCase)).ToList();
             ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>(); //临时的多线程需要更新文件列表
             Step1Model offsite = JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(offsiteSnapshotFile));
@@ -117,7 +117,7 @@ namespace OffsiteBackupOfflineSync.Utility
             }
         }
 
-        public void Export(string outputDir,bool hardLink)
+        public void Export(string outputDir, bool hardLink)
         {
             stopping = false;
             if (!Directory.Exists(outputDir))

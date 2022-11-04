@@ -71,16 +71,6 @@ namespace OffsiteBackupOfflineSync.UI
                 await CommonDialog.ShowErrorDialogAsync("源目录不存在");
                 return;
             }
-            if (string.IsNullOrEmpty(ViewModel.DestDir))
-            {
-                await CommonDialog.ShowErrorDialogAsync("目标目录为空");
-                return;
-            }
-            if (!Directory.Exists(ViewModel.DestDir))
-            {
-                await CommonDialog.ShowErrorDialogAsync("目标目录为空");
-                return;
-            }
             try
             {
                 btnCopyOrMove.IsEnabled = false;
@@ -114,26 +104,6 @@ namespace OffsiteBackupOfflineSync.UI
             }
         }
 
-        private void UpdateList()
-        {
-            if (u.WrongPositionFiles == null || u.RightPositionFiles == null)
-            {
-                ViewModel.Files = new ObservableCollection<GoHomeFile>();
-                return;
-            }
-            IEnumerable<GoHomeFile> files = u.WrongPositionFiles;
-            if (ViewModel.DisplayRightPositon)
-            {
-                files = files.Concat(u.RightPositionFiles);
-            }
-            if (!ViewModel.DisplayMultipleMatches)
-            {
-                files = files.Where(p => p.MultipleMatchs == false);
-            }
-            files = files.OrderBy(p => p.Path);
-            ViewModel.Files = new ObservableCollection<GoHomeFile>(files);
-        }
-
         private void BrowseDestDirButton_Click(object sender, RoutedEventArgs e)
         {
             string path = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
@@ -162,24 +132,23 @@ namespace OffsiteBackupOfflineSync.UI
 
         }
 
-        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.Files?.ForEach(p => p.Checked = true);
-        }
-
-        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.Files?.ForEach(p => p.Checked = false);
-        }
-
-        private void StopButton_Click(object sender, RoutedEventArgs e)
-        {
-            btnStop.IsEnabled = false;
-            u.Stop();
-        }
-
         private async void CopyOrMoveButton_Click(object sender, RoutedEventArgs e)
         {
+            if (string.IsNullOrEmpty(ViewModel.SourceDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("源目录为空");
+                return;
+            }
+            if (!Directory.Exists(ViewModel.SourceDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("源目录不存在");
+                return;
+            }
+            if (string.IsNullOrEmpty(ViewModel.DestDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("目标目录为空");
+                return;
+            }
             try
             {
                 stkConfig.IsEnabled = false;
@@ -196,8 +165,12 @@ namespace OffsiteBackupOfflineSync.UI
                 {
                     await Task.Run(() =>
                     {
-                            CopyOrMove(copyMoveIndex);
+                        u.CopyOrMove(ViewModel.Files.Where(p => p.Checked), ViewModel.SourceDir, ViewModel.DestDir, copyMoveIndex == 0);
                     });
+                }
+                else
+                {
+                    throw new OperationCanceledException();
                 }
 
 
@@ -221,58 +194,51 @@ namespace OffsiteBackupOfflineSync.UI
             }
         }
 
-        private void CopyOrMove(int copyMoveIndex)
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
         {
-            string copyMoveText = copyMoveIndex == 0 ? "复制" : "移动";
-            var files = ViewModel.Files.Where(p => !p.RightPosition && p.Checked);
-            long count = files.Sum(p => p.Length);
-            ViewModel.ProgressMax = count;
-            long progress = 0;
-            foreach (var file in files)
+            ViewModel.Files?.ForEach(p => p.Checked = true);
+        }
+
+        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Files?.ForEach(p => p.Checked = false);
+        }
+
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            btnStop.IsEnabled = false;
+            u.Stop();
+        }
+
+        private void UpdateList()
+        {
+            if (u.WrongPositionFiles == null || u.RightPositionFiles == null)
             {
-                try
-                {
-                    ViewModel.Message = $"正在{copyMoveText} {file.Path}";
-                    string destFile = Path.Combine(ViewModel.DestDir, file.Template.Path);
-                    string destDir = Path.GetDirectoryName(destFile);
-                    if (!Directory.Exists(destDir))
-                    {
-                        Directory.CreateDirectory(destDir);
-                    }
-                    if (copyMoveIndex == 0)
-                    {
-                        File.Copy(Path.Combine(ViewModel.SourceDir, file.Path), destFile);
-                        //Debug.WriteLine($"复制{Path.Combine(ViewModel.SourceDir, file.Path)}到{destFile}");
-                    }
-                    else
-                    {
-                        File.Move(Path.Combine(ViewModel.SourceDir, file.Path), destFile);
-                        //Debug.WriteLine($"移动{Path.Combine(ViewModel.SourceDir, file.Path)}到{destFile}");
-                    }
-                    file.Complete = true;
-                }
-                catch(Exception ex)
-                {
-                    file.Message = ex.Message;
-                }
-                finally
-                {
-                    progress += file.Length;
-                    ViewModel.Progress = progress;
-                }
+                ViewModel.Files = new ObservableCollection<GoHomeFile>();
+                return;
             }
+            IEnumerable<GoHomeFile> files = u.WrongPositionFiles;
+            if (ViewModel.DisplayRightPositon)
+            {
+                files = files.Concat(u.RightPositionFiles);
+            }
+            if (!ViewModel.DisplayMultipleMatches)
+            {
+                files = files.Where(p => p.MultipleMatchs == false);
+            }
+            files = files.OrderBy(p => p.Path);
+            ViewModel.Files = new ObservableCollection<GoHomeFile>(files);
         }
     }
 
 
     public class FilesGoHomeViewModel : ViewModelBase<GoHomeFile>
     {
-        private string blackList = "";
+        private string blackList = "Thumbs.db";
         private bool blackListUseRegex;
         private string destDir;
-        private string filter;
-        private bool filterIncludePath;
-        private bool filterReverse;
+        private bool displayMultipleMatches = true;
+        private bool displayRightPositon = false;
         private string sourceDir;
         private string templateDir;
         public string BlackList
@@ -287,28 +253,28 @@ namespace OffsiteBackupOfflineSync.UI
             set => this.SetValueAndNotify(ref blackListUseRegex, value, nameof(BlackListUseRegex));
         }
 
+        public bool CompareLength { get; set; } = true;
+
+        public bool CompareModifiedTime { get; set; } = true;
+
+        public bool CompareName { get; set; } = true;
+
         public string DestDir
         {
             get => destDir;
             set => this.SetValueAndNotify(ref destDir, value, nameof(DestDir));
         }
 
-        public string Filter
+        public bool DisplayMultipleMatches
         {
-            get => filter;
-            set => this.SetValueAndNotify(ref filter, value, nameof(Filter));
+            get => displayMultipleMatches;
+            set => this.SetValueAndNotify(ref displayMultipleMatches, value, nameof(DisplayMultipleMatches));
         }
 
-        public bool FilterIncludePath
+        public bool DisplayRightPositon
         {
-            get => filterIncludePath;
-            set => this.SetValueAndNotify(ref filterIncludePath, value, nameof(FilterIncludePath));
-        }
-
-        public bool FilterReverse
-        {
-            get => filterReverse;
-            set => this.SetValueAndNotify(ref filterReverse, value, nameof(FilterReverse));
+            get => displayRightPositon;
+            set => this.SetValueAndNotify(ref displayRightPositon, value, nameof(DisplayRightPositon));
         }
 
         public string SourceDir
@@ -329,24 +295,6 @@ namespace OffsiteBackupOfflineSync.UI
             get => templateDir;
             set => this.SetValueAndNotify(ref templateDir, value, nameof(TemplateDir));
         }
-
-        public bool CompareName { get; set; } = true;
-        public bool CompareLength { get; set; } = true;
-        public bool CompareModifiedTime { get; set; } = true;
-
-        private bool displayRightPositon = false;
-        public bool DisplayRightPositon
-        {
-            get => displayRightPositon;
-            set => this.SetValueAndNotify(ref displayRightPositon, value, nameof(DisplayRightPositon));
-        }
-        private bool displayMultipleMatches = true;
-        public bool DisplayMultipleMatches
-        {
-            get => displayMultipleMatches;
-            set => this.SetValueAndNotify(ref displayMultipleMatches, value, nameof(DisplayMultipleMatches));
-        }
-
     }
 
 }

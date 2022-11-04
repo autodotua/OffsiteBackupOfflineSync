@@ -12,27 +12,18 @@ namespace OffsiteBackupOfflineSync.Model
 {
     public class SyncFile : FileBase
     {
-        private bool isChecked = true;
-
 
         public SyncFile()
         {
-
+            Checked = true; 
         }
-        public SyncFile(FileInfo file, string rootDir)
+        public SyncFile(FileInfo file, string rootDir) : this()
         {
             Name = file.Name;
             Path = System.IO.Path.GetRelativePath(System.IO.Path.GetDirectoryName(rootDir), file.FullName);
             LastWriteTime = file.LastWriteTime;
             Length = file.Length;
         }
-        [JsonIgnore]
-        public bool Checked
-        {
-            get => isChecked;
-            set => this.SetValueAndNotify(ref isChecked, value, nameof(Checked));
-        }
-
 
         public string TempName { get; set; }
         public FileUpdateType UpdateType { get; set; }

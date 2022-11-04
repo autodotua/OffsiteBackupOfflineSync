@@ -169,7 +169,7 @@ namespace OffsiteBackupOfflineSync.UI
     }
     public class Step2ViewModel : ViewModelBase<SyncFile>
     {
-        private string blackList;
+        private string blackList = "Thumbs.db";
         private bool blackListUseRegex;
         private bool hardLink;
         private string localDir;

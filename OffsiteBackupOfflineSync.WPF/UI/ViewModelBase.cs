@@ -6,21 +6,38 @@ using Newtonsoft.Json;
 
 namespace OffsiteBackupOfflineSync.UI
 {
-    public class ViewModelBase<T> : INotifyPropertyChanged where T:FileBase
+    public class ViewModelBase<T> : INotifyPropertyChanged where T : FileBase
     {
+        private ObservableCollection<T> files=new ObservableCollection<T>();
         private string message = "就绪";
         private double progress;
         private bool progressIndeterminate;
         private double progressMax;
-        private ObservableCollection<T> files;
-
         private bool working;
 
         public event PropertyChangedEventHandler PropertyChanged;
-
+        [JsonIgnore]
         public long AddedFileLength => Files?.Cast<SyncFile>().Where(p => p.UpdateType == FileUpdateType.Add && p.Checked)?.Sum(p => p.Length) ?? 0;
 
-        public long DeletedFileCount => Files?.Cast<SyncFile>().Where(p => p.UpdateType == FileUpdateType.Delete && p.Checked)?.Count() ?? 0;
+        [JsonIgnore]
+        public int DeletedFileCount => Files?.Cast<SyncFile>().Where(p => p.UpdateType == FileUpdateType.Delete && p.Checked)?.Count() ?? 0;
+
+        [JsonIgnore]
+        public int CheckedFileCount => Files?.Where(p => p.Checked)?.Count() ?? 0;
+
+        [JsonIgnore]
+        public ObservableCollection<T> Files
+        {
+            get => files;
+            set
+            {
+                this.SetValueAndNotify(ref files, value,
+                nameof(Files), nameof(AddedFileLength), nameof(ModifiedFileLength), nameof(DeletedFileCount), nameof(CheckedFileCount));
+
+                value.ForEach(p => AddFileCheckedNotify(p));
+            }
+        }
+
         [JsonIgnore]
         public string Message
         {
@@ -47,59 +64,35 @@ namespace OffsiteBackupOfflineSync.UI
             set => this.SetValueAndNotify(ref progressMax, value, nameof(ProgressMax));
         }
         [JsonIgnore]
-        public ObservableCollection<T> Files
-        {
-            get => files;
-            set
-            {
-                this.SetValueAndNotify(ref files, value,
-                nameof(Files), nameof(AddedFileLength), nameof(ModifiedFileLength), nameof(DeletedFileCount));
-                if (typeof(T).Equals(typeof(SyncFile)))
-                {
-                    value.Cast<SyncFile>().ForEach(p => AddFileCheckedNotify(p));
-                }
-                //value.CollectionChanged += (s, e) =>
-                //{
-                //    switch (e.Action)
-                //    {
-                //        case System.Collections.Specialized.NotifyCollectionChangedAction.Add:
-                //            foreach (SyncFile item in e.NewItems)
-                //            {
-                //                AddFileCheckedNotify(item);
-                //            }
-                //            break;
-                //        default:
-                //            break;
-                //    }
-                //};
-            }
-        }
-        [JsonIgnore]
         public bool Working
         {
             get => working;
             set => this.SetValueAndNotify(ref working, value, nameof(Working));
         }
 
-        private void AddFileCheckedNotify(SyncFile file)
+        private void AddFileCheckedNotify(FileBase file)
         {
             file.PropertyChanged += (s, e) =>
             {
-                if (e.PropertyName == nameof(SyncFile.Checked))
+                if (e.PropertyName == nameof(FileBase.Checked))
                 {
-                    switch ((s as SyncFile).UpdateType)
+                    this.Notify(nameof(CheckedFileCount));
+                    if (s is SyncFile syncFile)
                     {
-                        case FileUpdateType.Add:
-                            this.Notify(nameof(AddedFileLength));
-                            break;
-                        case FileUpdateType.Modify:
-                            this.Notify(nameof(ModifiedFileLength));
-                            break;
-                        case FileUpdateType.Delete:
-                            this.Notify(nameof(DeletedFileCount));
-                            break;
-                        default:
-                            break;
+                        switch (syncFile.UpdateType)
+                        {
+                            case FileUpdateType.Add:
+                                this.Notify(nameof(AddedFileLength));
+                                break;
+                            case FileUpdateType.Modify:
+                                this.Notify(nameof(ModifiedFileLength));
+                                break;
+                            case FileUpdateType.Delete:
+                                this.Notify(nameof(DeletedFileCount));
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
             };

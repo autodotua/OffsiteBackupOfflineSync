@@ -27,6 +27,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 throw new ArgumentException("至少需要有一个比较类型");
             }
             //初始化变量
+            stopping=false; 
             filesGoHomeFiles.Clear();
             string[] blacks = blackList?.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
             List<Regex> blackRegexs = blacks.Select(p => new Regex(p, RegexOptions.IgnoreCase)).ToList();
@@ -60,6 +61,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     continue;
                 }
+                InvokeMessageReceivedEvent($"正在分析源文件：{sourceFile.FullName}");
                 sourceFileCount++;
                 matchedFiles.Clear();
                 tempFiles.Clear();
@@ -130,48 +132,16 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                 }
 
+
+                if (stopping)
+                {
+                    throw new OperationCanceledException();
+                }
+
                 //在指定字典中查找符合所给的属性值的文件
                 void GetMatchedFiles<TK>(Dictionary<TK, object> dic, TK key)
                 {
                     object files = null;
-                    //if (key is DateTime dt)
-                    //{
-                    //    //对于文件修改时间，由于FAT类文件系统的写入时间有精度限制，因此需要在所给时间前后进行查找
-                    //    files = new List<FileInfo>();
-                    //    var fileList = files as List<FileInfo>;
-                    //    DateTime end = dt.AddSeconds(maxTimeTolerance);
-                    //    //从修改时间前后容差进行判断
-                    //    for (DateTime time = dt.AddSeconds(-maxTimeTolerance); time <= end; time += oneSecond)
-                    //    {
-                    //        if (dic.ContainsKey((TK)time))
-                    //        {
-                    //            if (dic[key] is FileInfo f)
-                    //            {
-                    //                fileList.Add(f);
-                    //            }
-                    //            else if (dic[key] is List<FileInfo> l)
-                    //            {
-                    //                fileList.AddRange(l);
-                    //            }
-                    //            else
-                    //            {
-                    //                throw new Exception();
-                    //            }
-                    //        }
-                    //    }
-
-                    //    if (fileList.Count == 1)
-                    //    {
-                    //        files = fileList[0];
-                    //    }
-                    //    else if (fileList.Count == 0)
-                    //    {
-                    //        notMatched = true;
-                    //        return;
-                    //    }
-                    //}
-                    //else
-                    //{
                         if (!dic.ContainsKey(key))
                         {
                             notMatched = true;
@@ -243,11 +213,17 @@ namespace OffsiteBackupOfflineSync.Utility
 
             foreach (var file in fileInfos)
             {
+                InvokeMessageReceivedEvent($"正在分析模板文件：{file.FullName}");
                 SetOrAdd(name2Template, file.Name);
                 SetOrAdd(length2Template, file.Length);
                 for (int i=-maxTimeTolerance;i<=maxTimeTolerance;i++)
                 {
                     SetOrAdd(modifiedTime2Template, TruncateToSecond(file.LastWriteTime).AddSeconds(i));
+                }
+
+                if(stopping)
+                {
+                    throw new OperationCanceledException();
                 }
                 void SetOrAdd<TK>(Dictionary<TK, object> dic, TK key)
                 {
@@ -274,6 +250,57 @@ namespace OffsiteBackupOfflineSync.Utility
 
             }
 
+        }
+
+
+        public void CopyOrMove(IEnumerable<GoHomeFile> files,string sourceDir,string destDir, bool copy)
+        {
+            string copyMoveText = copy ? "复制" : "移动";
+            long count = files.Sum(p => p.Length);
+            long progress = 0;
+            stopping = false;
+            if(!copy)
+            {
+                files = files.Where(p => !p.RightPosition);
+            }
+            foreach (var file in files)
+            {
+                try
+                {
+                    InvokeMessageReceivedEvent($"正在{copyMoveText} {file.Path}");
+                    string destFile = Path.Combine(destDir, file.Template.Path);
+                    string destFileDir = Path.GetDirectoryName(destFile);
+                    if (!Directory.Exists(destFileDir))
+                    {
+                        Directory.CreateDirectory(destFileDir);
+                    }
+                    if (copy)
+                    {
+                        File.Copy(Path.Combine(sourceDir, file.Path), destFile);
+                        //Debug.WriteLine($"复制{Path.Combine(ViewModel.SourceDir, file.Path)}到{destFile}");
+                    }
+                    else
+                    {
+                        File.Move(Path.Combine(sourceDir, file.Path), destFile);
+                        //Debug.WriteLine($"移动{Path.Combine(ViewModel.SourceDir, file.Path)}到{destFile}");
+                    }
+                    file.Complete = true;
+
+                    if(stopping)
+                    {
+                        throw new OperationCanceledException();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    file.Message = ex.Message;
+                }
+                finally
+                {
+                    progress += file.Length;
+                    InvokeProgressReceivedEvent(progress, count);
+                }
+            }
         }
     }
 }

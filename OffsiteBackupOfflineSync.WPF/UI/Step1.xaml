@@ -80,14 +80,13 @@
         </GroupBox>
         <Grid Grid.Row="99">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock
-                Width="360"
                 VerticalAlignment="Center"
                 Text="{Binding Message}"
                 TextTrimming="CharacterEllipsis"

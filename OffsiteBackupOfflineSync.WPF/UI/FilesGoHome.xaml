@@ -264,6 +264,11 @@
                 CanUserReorderColumns="True"
                 ItemsSource="{Binding Files}"
                 RowDetailsTemplate="{StaticResource DataGridDetailTemplate}">
+                <!--<DataGrid.Resources>
+                    <Style TargetType="{x:Type DataGridCell}">
+                        <Setter Property="IsEnabled" Value="{Binding RightPosition, Converter={StaticResource InverseBoolConverter}}" />
+                    </Style>
+                </DataGrid.Resources>-->
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn
                         Binding="{Binding Checked, UpdateSourceTrigger=PropertyChanged}"
@@ -304,8 +309,11 @@
                             <DataTemplate>
                                 <TextBlock
                                     x:Name="e"
-                                    Margin="16,0" Text="●" Foreground="Yellow"
-                                    VerticalAlignment="Center" />
+                                    Margin="16,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="Yellow"
+                                    Text="●"
+                                    ToolTip="文件位置不匹配" />
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding RightPosition}">
                                         <DataTrigger.Value>
@@ -314,6 +322,7 @@
                                         <DataTrigger.Setters>
                                             <Setter TargetName="e" Property="TextBlock.Text" Value="√" />
                                             <Setter TargetName="e" Property="TextBlock.Foreground" Value="Green" />
+                                            <Setter TargetName="e" Property="ToolTip" Value="文件已经位于正确的位置，无需进行处理" />
                                         </DataTrigger.Setters>
                                     </DataTrigger>
                                     <MultiDataTrigger>
@@ -324,6 +333,7 @@
                                         <MultiDataTrigger.Setters>
                                             <Setter TargetName="e" Property="TextBlock.Text" Value="⚠" />
                                             <Setter TargetName="e" Property="TextBlock.Foreground" Value="Red" />
+                                            <Setter TargetName="e" Property="ToolTip" Value="源文件对应多个模板文件，请仔细甄别" />
                                         </MultiDataTrigger.Setters>
                                     </MultiDataTrigger>
 
@@ -398,7 +408,9 @@
                 <TextBlock VerticalAlignment="Center">
                     <Run Text="共" />
                     <Run Text="{Binding Files.Count, Mode=OneWay}" />
-                    <Run Text="个文件" />
+                    <Run Text="个文件，已选择" />
+                    <Run Text="{Binding CheckedFileCount, Mode=OneWay}" />
+                    <Run Text="个" />
                 </TextBlock>
 
                 <Button
@@ -422,7 +434,7 @@
             Grid.Row="99"
             Margin="8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />
@@ -431,7 +443,6 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock
-                Width="360"
                 VerticalAlignment="Center"
                 Text="{Binding Message}"
                 TextTrimming="CharacterEllipsis"
