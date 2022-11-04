@@ -80,16 +80,6 @@
                 CanUserAddRows="False"
                 CanUserReorderColumns="True"
                 ItemsSource="{Binding Files}">
-                <DataGrid.Resources>
-                    <Style
-                        x:Key="DataGridCheckBoxColumnTextWrappingStyle"
-                        TargetType="{x:Type TextBlock}">
-                        <Setter Property="TextWrapping" Value="Wrap" />
-                        <Setter Property="VerticalAlignment" Value="Center" />
-                        <Setter Property="HorizontalAlignment" Value="Left" />
-                        <Setter Property="Margin" Value="8,0" />
-                    </Style>
-                </DataGrid.Resources>
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn
                         Binding="{Binding Checked, UpdateSourceTrigger=PropertyChanged}"

@@ -1,4 +1,5 @@
 ﻿using OffsiteBackupOfflineSync.Model;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
@@ -144,8 +145,16 @@ namespace OffsiteBackupOfflineSync.Utility
             return false;
         }
 
+      protected  TimeSpan oneSecond = TimeSpan.FromSeconds(1);
+        protected DateTime TruncateToSecond(DateTime dateTime)
+        {
+            if (dateTime == DateTime.MinValue || dateTime == DateTime.MaxValue)
+            {
+                return dateTime;
+            }
+            return dateTime.AddTicks(-(dateTime.Ticks % oneSecond.Ticks));
+        }
     }
-
 }
 
 

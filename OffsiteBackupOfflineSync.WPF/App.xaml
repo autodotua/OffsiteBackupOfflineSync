@@ -19,7 +19,7 @@
                 <Setter Property="TextWrapping" Value="Wrap" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="HorizontalAlignment" Value="Left" />
-                <Setter Property="Margin" Value="8,0" />
+                <Setter Property="Margin" Value="8,4" />
             </Style>
             <Style
                 BasedOn="{StaticResource DefaultDataGridCellStyle}"

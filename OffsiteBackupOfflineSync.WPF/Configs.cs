@@ -13,7 +13,7 @@ namespace OffsiteBackupOfflineSync
 {
     public class Configs : IJsonSerializable
     {
-        public static readonly double MaxTimeTolerance = 5;
+        public static readonly int MaxTimeTolerance = 3;
         private static readonly string configPath = "configs.json";
         private static Configs instance;
         private Configs()

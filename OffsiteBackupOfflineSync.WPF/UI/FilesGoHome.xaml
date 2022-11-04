@@ -11,6 +11,132 @@
     d:DesignHeight="450"
     d:DesignWidth="800"
     mc:Ignorable="d">
+    <UserControl.Resources>
+        <DataTemplate x:Key="DataGridDetailTemplate">
+            <Grid Margin="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock
+                        Grid.ColumnSpan="999"
+                        FontWeight="Bold"
+                        Text="模板文件信息" />
+
+                    <TextBlock
+                        Grid.Row="2"
+                        Text="文件名" />
+                    <TextBlock
+                        Grid.Row="2"
+                        Grid.Column="2"
+                        Text="{Binding Template.Name}" />
+
+                    <TextBlock
+                        Grid.Row="4"
+                        Text="相对路径" />
+                    <TextBlock
+                        Grid.Row="4"
+                        Grid.Column="2"
+                        Text="{Binding Template.Path}" />
+
+                    <TextBlock
+                        Grid.Row="6"
+                        Text="文件大小" />
+                    <TextBlock
+                        Grid.Row="6"
+                        Grid.Column="2"
+                        Text="{Binding Template.Length, Converter={StaticResource FileLength2StringConverter}}" />
+
+                    <TextBlock
+                        Grid.Row="8"
+                        Text="修改时间" />
+                    <TextBlock
+                        Grid.Row="8"
+                        Grid.Column="2"
+                        Text="{Binding Template.LastWriteTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
+
+
+                </Grid>
+                <Grid Grid.Column="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock
+                        Grid.ColumnSpan="999"
+                        FontWeight="Bold"
+                        Text="源文件信息" />
+
+                    <TextBlock
+                        Grid.Row="2"
+                        Text="文件名" />
+                    <TextBlock
+                        Grid.Row="2"
+                        Grid.Column="2"
+                        Text="{Binding Name}" />
+
+                    <TextBlock
+                        Grid.Row="4"
+                        Text="相对路径" />
+                    <TextBlock
+                        Grid.Row="4"
+                        Grid.Column="2"
+                        Text="{Binding Path}" />
+
+                    <TextBlock
+                        Grid.Row="6"
+                        Text="文件大小" />
+                    <TextBlock
+                        Grid.Row="6"
+                        Grid.Column="2"
+                        Text="{Binding Length, Converter={StaticResource FileLength2StringConverter}}" />
+
+                    <TextBlock
+                        Grid.Row="8"
+                        Text="修改时间" />
+                    <TextBlock
+                        Grid.Row="8"
+                        Grid.Column="2"
+                        Text="{Binding LastWriteTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
+
+
+                </Grid>
+
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -56,7 +182,7 @@
                     Text="源目录：" />
                 <TextBox
                     Grid.Column="2"
-                    Text="{Binding SourceDir}" />
+                    Text="{Binding SourceDir, UpdateSourceTrigger=PropertyChanged}" />
                 <Button
                     Grid.Column="4"
                     Click="BrowseSourceDirButton_Click"
@@ -106,12 +232,24 @@
                     IsChecked="{Binding BlackListUseRegex}" />
             </Grid>
 
-            <Grid HorizontalAlignment="Right">
+            <ui:SimpleStackPanel
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="8">
+                <CheckBox
+                    Content="匹配文件名"
+                    IsChecked="{Binding CompareName}" />
+                <CheckBox
+                    Content="匹配文件大小"
+                    IsChecked="{Binding CompareLength}" />
+                <CheckBox
+                    Content="匹配修改时间"
+                    IsChecked="{Binding CompareModifiedTime}" />
                 <Button
                     Padding="32,4"
                     Click="AnalyzeButton_Click"
                     Content="分析" />
-            </Grid>
+            </ui:SimpleStackPanel>
         </ui:SimpleStackPanel>
         <Grid Grid.Row="2">
             <Grid.RowDefinitions>
@@ -120,21 +258,20 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <DataGrid
+                AreRowDetailsFrozen="True"
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 CanUserReorderColumns="True"
-                ItemsSource="{Binding UpdateFiles}">
-                <DataGrid.Resources>
-                    <Style
-                        x:Key="DataGridCheckBoxColumnTextWrappingStyle"
-                        TargetType="{x:Type TextBlock}">
-                        <Setter Property="TextWrapping" Value="Wrap" />
-                        <Setter Property="VerticalAlignment" Value="Center" />
-                        <Setter Property="HorizontalAlignment" Value="Left" />
-                        <Setter Property="Margin" Value="8,0" />
-                    </Style>
-                </DataGrid.Resources>
+                ItemsSource="{Binding Files}"
+                RowDetailsTemplate="{StaticResource DataGridDetailTemplate}">
                 <DataGrid.Columns>
+                    <DataGridCheckBoxColumn
+                        Binding="{Binding Checked, UpdateSourceTrigger=PropertyChanged}"
+                        CanUserReorder="False"
+                        CanUserResize="False"
+                        CanUserSort="False"
+                        Header="应用"
+                        IsReadOnly="{Binding ElementName=root, Path=DataContext.Working}" />
                     <DataGridTemplateColumn
                         CanUserResize="False"
                         Header="完成">
@@ -160,6 +297,41 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
+                    <DataGridTemplateColumn
+                        CanUserResize="False"
+                        Header="多匹配">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock
+                                    x:Name="e"
+                                    Margin="16,0" Text="●" Foreground="Yellow"
+                                    VerticalAlignment="Center" />
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding RightPosition}">
+                                        <DataTrigger.Value>
+                                            <sys:Boolean>True</sys:Boolean>
+                                        </DataTrigger.Value>
+                                        <DataTrigger.Setters>
+                                            <Setter TargetName="e" Property="TextBlock.Text" Value="√" />
+                                            <Setter TargetName="e" Property="TextBlock.Foreground" Value="Green" />
+                                        </DataTrigger.Setters>
+                                    </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding RightPosition}" Value="False" />
+                                            <Condition Binding="{Binding MultipleMatchs}" Value="True" />
+                                        </MultiDataTrigger.Conditions>
+                                        <MultiDataTrigger.Setters>
+                                            <Setter TargetName="e" Property="TextBlock.Text" Value="⚠" />
+                                            <Setter TargetName="e" Property="TextBlock.Foreground" Value="Red" />
+                                        </MultiDataTrigger.Setters>
+                                    </MultiDataTrigger>
+
+
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
                     <DataGridTextColumn
                         Width="200"
@@ -168,12 +340,18 @@
                         Header="文件名"
                         IsReadOnly="True" />
                     <DataGridTextColumn
-                        Width="400"
+                        Width="300"
                         Binding="{Binding Path}"
                         ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="路径"
                         IsReadOnly="True" />
 
+                    <DataGridTextColumn
+                        Width="300"
+                        Binding="{Binding Template.Path}"
+                        ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
+                        Header="模板路径"
+                        IsReadOnly="True" />
                     <DataGridTextColumn
                         Binding="{Binding LastWriteTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
                         CanUserResize="False"
@@ -185,6 +363,11 @@
                         Header="大小"
                         IsReadOnly="True" />
 
+                    <DataGridTextColumn
+                        Binding="{Binding Message}"
+                        CanUserResize="False"
+                        Header="信息"
+                        IsReadOnly="True" />
 
 
                 </DataGrid.Columns>
@@ -192,12 +375,29 @@
             <ui:SimpleStackPanel
                 Grid.Row="2"
                 Margin="8,0"
+                HorizontalAlignment="Left"
+                Orientation="Horizontal"
+                Spacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="显示：" />
+                <CheckBox
+                    Content="包含位置正确的匹配"
+                    IsChecked="{Binding DisplayRightPositon}" />
+                <CheckBox
+                    Content="包含多匹配"
+                    IsChecked="{Binding DisplayMultipleMatches}" />
+            </ui:SimpleStackPanel>
+            <ui:SimpleStackPanel
+                Grid.Row="2"
+                Margin="8,0"
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
                 Spacing="8">
+
                 <TextBlock VerticalAlignment="Center">
                     <Run Text="共" />
-                    <Run Text="{Binding UpdateFiles.Count, Mode=OneWay}" />
+                    <Run Text="{Binding Files.Count, Mode=OneWay}" />
                     <Run Text="个文件" />
                 </TextBlock>
 
@@ -251,11 +451,11 @@
                 Content="停止"
                 IsEnabled="False" />
             <Button
-                x:Name="btnCreate"
+                x:Name="btnCopyOrMove"
                 Grid.Column="6"
                 Width="128"
-                Click="CreateButton_Click"
-                Content="创建"
+                Click="CopyOrMoveButton_Click"
+                Content="复制/移动"
                 IsEnabled="False" />
         </Grid>
     </Grid>

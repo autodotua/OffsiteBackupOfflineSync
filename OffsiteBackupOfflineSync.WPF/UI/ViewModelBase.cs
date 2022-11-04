@@ -54,7 +54,7 @@ namespace OffsiteBackupOfflineSync.UI
             {
                 this.SetValueAndNotify(ref files, value,
                 nameof(Files), nameof(AddedFileLength), nameof(ModifiedFileLength), nameof(DeletedFileCount));
-                if (typeof(T).Equals(typeof(SyncFile)));
+                if (typeof(T).Equals(typeof(SyncFile)))
                 {
                     value.Cast<SyncFile>().ForEach(p => AddFileCheckedNotify(p));
                 }
