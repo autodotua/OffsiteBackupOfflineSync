@@ -31,7 +31,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     newFile.Directory.Create();
                 }
-                InvokeMessageReceivedEvent($"正在创建 {relativePath}");
+                InvokeMessageReceivedEvent($"正在创建：{relativePath}");
                 InvokeProgressReceivedEvent(++index, Files.Length);
                 try
                 {
@@ -66,7 +66,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     throw new OperationCanceledException();
                 }
-                InvokeMessageReceivedEvent($"正在处理 {Path.GetRelativePath(dir,file.FullName)}");
+                InvokeMessageReceivedEvent($"正在处理：{Path.GetRelativePath(dir,file.FullName)}");
                 files.Add(new FileTreeFile()
                 {
                     Name = file.Name,

@@ -1,20 +1,15 @@
-﻿using System.Windows;
-using System.Windows.Controls;
+﻿using FzLib;
+using FzLib.Collection;
 using Microsoft.WindowsAPICodePack.FzExtension;
-using FzLib;
-using System.ComponentModel;
-using System.IO;
 using ModernWpf.FzExtension.CommonDialog;
-using OffsiteBackupOfflineSync;
-using System.Diagnostics;
-using FzLib.WPF.Converters;
-using FzLib.WPF;
-using Microsoft.WindowsAPICodePack.Dialogs;
-using System.Collections.ObjectModel;
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
-using FzLib.Collection;
+using OffsiteBackupOfflineSync.WPF.UI;
+using System.ComponentModel;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -24,18 +19,15 @@ namespace OffsiteBackupOfflineSync.UI
     public partial class Step1 : UserControl
     {
         private readonly Step1Utility u = new Step1Utility();
+
         public Step1(Step1ViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-            u.MessageReceived += (s, e) =>
-            {
-                ViewModel.Message = e.Message;
-            };
+            PanelHelper.RegisterMessageAndProgressEvent(u, viewModel);
             ViewModel.Dirs = ViewModel.Dirs;
-
         }
 
         public Step1ViewModel ViewModel { get; }
@@ -49,6 +41,20 @@ namespace OffsiteBackupOfflineSync.UI
             }
         }
 
+        private void BrowseOutputFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            string name = $"{DateTime.Now:yyyyMMdd}-";
+            name += GetVolumeName(name);
+            string path = new FileFilterCollection().Add("异地备份快照", "obos1")
+               .CreateSaveFileDialog()
+               .SetDefault(name)
+               .GetFilePath();
+            if (path != null)
+            {
+                ViewModel.OutputFile = path;
+            }
+        }
+
         private async void ExportButton_Click(object sender, RoutedEventArgs e)
         {
             var dirs = lst.SelectedItems.Cast<string>().ToList();
@@ -57,37 +63,35 @@ namespace OffsiteBackupOfflineSync.UI
                 await CommonDialog.ShowErrorDialogAsync("选择的目录为空");
                 return;
             }
-            string name = $"{DateTime.Now:yyyyMMdd}-";
-            name += GetVolumeName(name);
+            if (string.IsNullOrWhiteSpace(ViewModel.OutputFile))
+            {
+                await CommonDialog.ShowErrorDialogAsync("未设置输出文件");
+                return;
+            }
+
             ViewModel.SelectedDirectoriesHistory.AddOrSetValue(ViewModel.Dir, dirs);
-            string path = new FileFilterCollection().Add("异地备份快照", "obos1")
-                .CreateSaveFileDialog()
-                .SetDefault(name)
-                .GetFilePath();
-            if (path != null)
+
+            ViewModel.UpdateStatus(StatusType.Processing);
+            try
+            {
+                await Task.Run(() =>
+                {
+                    u.Enumerate(dirs, ViewModel.OutputFile);
+                });
+            }
+            catch (OperationCanceledException)
             {
 
-                ViewModel.Working = true;
-                btnExport.IsEnabled = false;
-                try
-                {
-                    ViewModel.Message = "正在查找文件";
-                    await Task.Run(() =>
-                    {
-                        u.Enumerate(dirs, path);
-                    });
-                }
-                catch (Exception ex)
-                {
-                    await CommonDialog.ShowErrorDialogAsync(ex, "导出失败");
-                }
-                finally
-                {
-                    ViewModel.Working = false;
-                    btnExport.IsEnabled = true;
-                    ViewModel.Message = "就绪";
-                }
             }
+            catch (Exception ex)
+            {
+                await CommonDialog.ShowErrorDialogAsync(ex, "导出失败");
+            }
+            finally
+            {
+                ViewModel.UpdateStatus(StatusType.Ready);
+            }
+
         }
 
         private string GetVolumeName(string path)
@@ -114,11 +118,17 @@ namespace OffsiteBackupOfflineSync.UI
             lst.UnselectAll();
         }
 
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.UpdateStatus(StatusType.Stopping);
+            u.Stop();
+        }
+
         private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ViewModel.Dirs))
             {
-                if(ViewModel.Dirs.Count == 0)
+                if (ViewModel.Dirs.Count == 0)
                 {
                     return;
                 }
@@ -147,11 +157,12 @@ namespace OffsiteBackupOfflineSync.UI
         }
     }
 
-
     public class Step1ViewModel : ViewModelBase<FileBase>
     {
         private string dir;
         private List<string> dirs = new List<string>();
+
+        private string outputFile;
 
         public string Dir
         {
@@ -172,14 +183,20 @@ namespace OffsiteBackupOfflineSync.UI
                 }
             }
         }
+
         [JsonIgnore]
         public List<string> Dirs
         {
             get => dirs;
             set => this.SetValueAndNotify(ref dirs, value, nameof(Dirs));
         }
+        public string OutputFile
+        {
+            get => outputFile;
+            set => this.SetValueAndNotify(ref outputFile, value, nameof(OutputFile));
+        }
+
 
         public Dictionary<string, List<string>> SelectedDirectoriesHistory { get; set; } = new Dictionary<string, List<string>>();
     }
-
 }

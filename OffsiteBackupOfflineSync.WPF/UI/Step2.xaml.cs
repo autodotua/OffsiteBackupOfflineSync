@@ -1,44 +1,32 @@
-﻿using System.Windows;
-using System.Windows.Controls;
+﻿using FzLib;
 using Microsoft.WindowsAPICodePack.FzExtension;
-using FzLib;
-using System.IO;
 using ModernWpf.FzExtension.CommonDialog;
-using OffsiteBackupOfflineSync;
-using System.Diagnostics;
-using Newtonsoft.Json;
-using OffsiteBackupOfflineSync.Utility;
-using System.Collections.ObjectModel;
 using OffsiteBackupOfflineSync.Model;
+using OffsiteBackupOfflineSync.Utility;
+using OffsiteBackupOfflineSync.WPF.UI;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace OffsiteBackupOfflineSync.UI
 {
-
     /// <summary>
     /// RebuildPanel.xaml 的交互逻辑
     /// </summary>
     public partial class Step2 : UserControl
     {
         private readonly Step2Utility u = new Step2Utility();
+
         public Step2(Step2ViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
-            u.MessageReceived += (s, e) =>
-            {
-                ViewModel.Message = e.Message;
-            };
-            u.ProgressUpdated += (s, e) =>
-            {
-                if (e.MaxValue != ViewModel.ProgressMax)
-                {
-                    ViewModel.ProgressMax = e.MaxValue;
-                }
-                ViewModel.Progress = e.Value;
-            };
+            PanelHelper.RegisterMessageAndProgressEvent(u, viewModel);
         }
-        public Step2ViewModel ViewModel { get; } 
+
+        public Step2ViewModel ViewModel { get; }
 
         private void BrowseLocalDirButton_Click(object sender, RoutedEventArgs e)
         {
@@ -58,30 +46,37 @@ namespace OffsiteBackupOfflineSync.UI
             }
         }
 
+        private void BrowsePatchDirButton_Click(object sender, RoutedEventArgs e)
+        {
+            var outputDir = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
+            if (outputDir != null)
+            {
+                ViewModel.PatchDir = outputDir;
+            }
+        }
+
         private async void ExportButton_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel.Files.Count == 0)
             {
                 await CommonDialog.ShowErrorDialogAsync("本地和异地没有差异");
+                return;
             }
-            var outputDir = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
-            if (outputDir != null)
+            if (string.IsNullOrWhiteSpace(ViewModel.PatchDir))
             {
+                await CommonDialog.ShowErrorDialogAsync("未设置导出补丁目录");
+                return;
+            }
                 try
                 {
-                    ViewModel.Working = true;
-                    stkConfig.IsEnabled = false;
-                    btnStop.IsEnabled = true;
-                    btnPatch.IsEnabled = false;
-                    ViewModel.Progress = 0;
+                    ViewModel.UpdateStatus(StatusType.Processing);
                     await Task.Run(() =>
                     {
-                        u.Export(outputDir,ViewModel.HardLink);
+                        u.Export(ViewModel.PatchDir, ViewModel.HardLink);
                     });
                 }
                 catch (OperationCanceledException)
                 {
-
                 }
                 catch (Exception ex)
                 {
@@ -89,21 +84,16 @@ namespace OffsiteBackupOfflineSync.UI
                 }
                 finally
                 {
-                    stkConfig.IsEnabled = true;
-                    btnPatch.IsEnabled = true;
-                    btnStop.IsEnabled = false;
-                    ViewModel.Message = "就绪";
-                    ViewModel.Working = false;
-                    ViewModel.Progress = ViewModel.ProgressMax;
+                    ViewModel.UpdateStatus(StatusType.Analyzed);
                 }
-            }
+            
         }
 
         private async void SearchChangeButton_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(ViewModel.OffsiteSnapshot))
             {
-                await CommonDialog.ShowErrorDialogAsync("快照文件为空");
+                await CommonDialog.ShowErrorDialogAsync("未设置快照文件");
                 return;
             }
             if (!File.Exists(ViewModel.OffsiteSnapshot))
@@ -113,7 +103,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             if (string.IsNullOrEmpty(ViewModel.LocalDir))
             {
-                await CommonDialog.ShowErrorDialogAsync("本地目录为空");
+                await CommonDialog.ShowErrorDialogAsync("未设置本地目录");
                 return;
             }
             if (!Directory.Exists(ViewModel.LocalDir))
@@ -121,11 +111,10 @@ namespace OffsiteBackupOfflineSync.UI
                 await CommonDialog.ShowErrorDialogAsync("本地目录不存在");
                 return;
             }
+            bool needProcess = false;
             try
             {
-                btnPatch.IsEnabled = false;
-                ViewModel.Message = "正在查找更改";
-                ViewModel.Working = true;
+                ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
                     u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot, ViewModel.BlackList, ViewModel.BlackListUseRegex, Configs.MaxTimeTolerance);
@@ -137,17 +126,18 @@ namespace OffsiteBackupOfflineSync.UI
                 }
                 else
                 {
-                    btnPatch.IsEnabled = true;
+                    needProcess = true;
                 }
+                ViewModel.UpdateStatus(needProcess ? StatusType.Analyzed : StatusType.Ready);
+            }
+            catch (OperationCanceledException)
+            {
+                ViewModel.UpdateStatus(StatusType.Ready);
             }
             catch (Exception ex)
             {
                 await CommonDialog.ShowErrorDialogAsync(ex, "查找失败");
-            }
-            finally
-            {
-                ViewModel.Working = false;
-                ViewModel.Message = "就绪";
+                ViewModel.UpdateStatus(StatusType.Ready);
             }
         }
 
@@ -163,10 +153,11 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
-            btnStop.IsEnabled = false;
+            ViewModel.UpdateStatus(StatusType.Stopping);
             u.Stop();
         }
     }
+
     public class Step2ViewModel : ViewModelBase<SyncFile>
     {
         private string blackList = "Thumbs.db";
@@ -174,6 +165,9 @@ namespace OffsiteBackupOfflineSync.UI
         private bool hardLink;
         private string localDir;
         private string offsiteSnapshot;
+
+        private string patchDir;
+
         public string BlackList
         {
             get => blackList;
@@ -191,7 +185,6 @@ namespace OffsiteBackupOfflineSync.UI
             get => hardLink;
             set => this.SetValueAndNotify(ref hardLink, value, nameof(HardLink));
         }
-
         public string LocalDir
         {
             get => localDir;
@@ -203,6 +196,11 @@ namespace OffsiteBackupOfflineSync.UI
             get => offsiteSnapshot;
             set => this.SetValueAndNotify(ref offsiteSnapshot, value, nameof(OffsiteSnapshot));
         }
-    }
 
+        public string PatchDir
+        {
+            get => patchDir;
+            set => this.SetValueAndNotify(ref patchDir, value, nameof(PatchDir));
+        }
+    }
 }

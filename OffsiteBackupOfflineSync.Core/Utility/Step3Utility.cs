@@ -14,6 +14,7 @@ namespace OffsiteBackupOfflineSync.Utility
         private string patchDir;
         public void Analyze(string patchDir, string offsiteDir)
         {
+            stopping = false;
             this.patchDir = patchDir;
             var json = File.ReadAllText(Path.Combine(patchDir, "file.obos2"));
             var step2 = JsonConvert.DeserializeObject<Step2Model>(json);
@@ -22,14 +23,23 @@ namespace OffsiteBackupOfflineSync.Utility
             LocalDirectories = step2.LocalDirectories;
 
             //检查文件
+            int index = 0;
             foreach (var file in UpdateFiles)
             {
+                if (stopping)
+                {
+                    throw new OperationCanceledException();
+                }
+#if DEBUG
+                TestUtility.SleepInDebug();
+#endif
                 string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
                 string target = Path.Combine(offsiteDir, file.Path);
                 if (!Directory.Exists(Path.GetDirectoryName(target)))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(target));
                 }
+                InvokeMessageReceivedEvent($"正在处理：{file.Path}");
                 switch (file.UpdateType)
                 {
                     case FileUpdateType.Add:
@@ -61,6 +71,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     default:
                         throw new InvalidEnumArgumentException();
                 }
+                InvokeProgressReceivedEvent(++index, UpdateFiles.Count) ;
             }
 
         }
@@ -75,7 +86,14 @@ namespace OffsiteBackupOfflineSync.Utility
             //更新文件
             foreach (var file in updateFiles)
             {
-                InvokeMessageReceivedEvent($"正在处理 {file.Path}");
+                if (stopping)
+                {
+                    throw new OperationCanceledException();
+                }
+#if DEBUG
+                TestUtility.SleepInDebug();
+#endif
+                InvokeMessageReceivedEvent($"正在处理：{file.Path}");
                 string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
                 if (file.UpdateType != FileUpdateType.Delete && !File.Exists(patch))
                 {
@@ -122,10 +140,6 @@ namespace OffsiteBackupOfflineSync.Utility
                 catch (Exception ex)
                 {
                     file.Message = $"错误：{ex.Message}";
-                }
-                if (stopping)
-                {
-                    throw new OperationCanceledException();
                 }
             }
 

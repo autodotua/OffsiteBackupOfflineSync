@@ -1,25 +1,7 @@
-﻿using Microsoft.WindowsAPICodePack.FzExtension;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using FzLib;
-using System.ComponentModel;
-using System.IO;
-using ModernWpf.FzExtension.CommonDialog;
-using Mapster;
-using FzLib.DataStorage.Serialization;
+﻿using FzLib;
 using OffsiteBackupOfflineSync.WPF.UI;
+using System.ComponentModel;
+using System.Windows;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -30,6 +12,7 @@ namespace OffsiteBackupOfflineSync.UI
         private readonly Step3 step3;
         private readonly CloneFileTree cloneFileTree;
         private readonly FilesGoHome filesGoHome;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -38,14 +21,15 @@ namespace OffsiteBackupOfflineSync.UI
 
             step1 = new Step1(config.Step1);
             step2 = new Step2(config.Step2);
-            step3=new  Step3(config.Step3);
+            step3 = new Step3(config.Step3);
             cloneFileTree = new CloneFileTree(config.CloneFileTree);
             filesGoHome = new FilesGoHome(config.FilesGoHome);
 
             frame.Navigate(step1);
         }
 
-        MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
+        private MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
+
         private void NavigationView_SelectionChanged(ModernWpf.Controls.NavigationView sender, ModernWpf.Controls.NavigationViewSelectionChangedEventArgs args)
         {
             if (args.IsSettingsSelected)
@@ -61,10 +45,12 @@ namespace OffsiteBackupOfflineSync.UI
                         frame.Navigate(step1);
                         ViewModel.NavigationViewHeader = "请使用异地磁盘完成这一步";
                         break;
+
                     case 1:
                         frame.Navigate(step2);
                         ViewModel.NavigationViewHeader = "请使用本地磁盘完成这一步";
                         break;
+
                     case 2:
                         frame.Navigate(step3);
                         ViewModel.NavigationViewHeader = "请使用异地磁盘完成这一步";
@@ -79,6 +65,7 @@ namespace OffsiteBackupOfflineSync.UI
                         frame.Navigate(cloneFileTree);
                         ViewModel.NavigationViewHeader = "创建保留文件大小和修改时间，但不占用空间的文件结构";
                         break;
+
                     case 1:
                         frame.Navigate(filesGoHome);
                         ViewModel.NavigationViewHeader = "将源目录中的文件结构匹配为模板目录中的文件结构";
@@ -91,7 +78,6 @@ namespace OffsiteBackupOfflineSync.UI
         private void SaveConfig()
         {
             var config = Configs.Instance;
-          
 
             config.Save();
         }
@@ -105,6 +91,7 @@ namespace OffsiteBackupOfflineSync.UI
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private string navigationViewHeader = "请使用异地磁盘完成这一步";
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public string NavigationViewHeader

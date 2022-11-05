@@ -267,7 +267,7 @@ namespace OffsiteBackupOfflineSync.Utility
             {
                 try
                 {
-                    InvokeMessageReceivedEvent($"正在{copyMoveText} {file.Path}");
+                    InvokeMessageReceivedEvent($"正在{copyMoveText}：{file.Path}");
                     string destFile = Path.Combine(destDir, file.Template.Path);
                     string destFileDir = Path.GetDirectoryName(destFile);
                     if (!Directory.Exists(destFileDir))

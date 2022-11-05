@@ -20,9 +20,8 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ui:SimpleStackPanel
-            x:Name="stkConfig"
             Margin="8"
-            IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}"
+            IsEnabled="{Binding CanEditConfigs}"
             Spacing="8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -32,6 +31,11 @@
                     <ColumnDefinition Width="8" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="8" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <TextBlock
                     VerticalAlignment="Center"
                     Text="本地补丁目录：" />
@@ -42,22 +46,17 @@
                     Grid.Column="4"
                     Click="BrowsePatchDirButton_Click"
                     Content="浏览" />
-            </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="108" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+
                 <TextBlock
+                    Grid.Row="2"
                     VerticalAlignment="Center"
                     Text="待更新异地目录：" />
                 <TextBox
+                    Grid.Row="2"
                     Grid.Column="2"
                     Text="{Binding OffsiteDir}" />
                 <Button
+                    Grid.Row="2"
                     Grid.Column="4"
                     Click="BrowseOffsiteDirButton_Click"
                     Content="浏览" />
@@ -86,8 +85,15 @@
                         CanUserReorder="False"
                         CanUserResize="False"
                         CanUserSort="False"
-                        Header="应用"
-                        IsReadOnly="{Binding ElementName=root, Path=DataContext.Working}" />
+                        Header="应用">
+                        <DataGridCheckBoxColumn.CellStyle>
+                            <Style
+                                BasedOn="{StaticResource DataGridCellStyle}"
+                                TargetType="{x:Type DataGridCell}">
+                                <Setter Property="UIElement.IsEnabled" Value="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=DataContext.CanEditConfigs}" />
+                            </Style>
+                        </DataGridCheckBoxColumn.CellStyle>
+                    </DataGridCheckBoxColumn>
                     <DataGridTemplateColumn
                         CanUserResize="False"
                         Header="完成">
@@ -176,7 +182,6 @@
                         CanUserResize="False"
                         Header="信息"
                         IsReadOnly="True" />
-
                 </DataGrid.Columns>
             </DataGrid>
             <ui:SimpleStackPanel
@@ -187,10 +192,14 @@
                 Spacing="8">
                 <TextBlock VerticalAlignment="Center">
                     <Run Text="共新增文件" />
+                    <Run Text="{Binding AddedFileCount, Mode=OneWay}" />
+                    <Run Text="个（" />
                     <Run Text="{Binding AddedFileLength, Mode=OneWay, Converter={StaticResource FileLength2StringConverter}}" />
-                    <Run Text="，修改文件" />
+                    <Run Text="），修改文件" />
+                    <Run Text="{Binding ModifiedFileCount, Mode=OneWay}" />
+                    <Run Text="个（" />
                     <Run Text="{Binding ModifiedFileLength, Mode=OneWay, Converter={StaticResource FileLength2StringConverter}}" />
-                    <Run Text="，删除文件" />
+                    <Run Text="），删除文件" />
                     <Run Text="{Binding DeletedFileCount, Mode=OneWay}" />
                     <Run Text="个" />
                 </TextBlock>
@@ -198,18 +207,17 @@
                 <Button
                     HorizontalAlignment="Stretch"
                     Click="SelectAllButton_Click"
-                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}">
+                    IsEnabled="{Binding CanEditConfigs}">
                     <ui:SymbolIcon Symbol="SelectAll" />
                 </Button>
                 <Button
                     Grid.Column="2"
                     HorizontalAlignment="Stretch"
                     Click="SelectNoneButton_Click"
-                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}">
+                    IsEnabled="{Binding CanEditConfigs}">
                     <ui:SymbolIcon Symbol="ClearSelection" />
                 </Button>
             </ui:SimpleStackPanel>
-
         </Grid>
         <Grid
             Grid.Row="99"
@@ -255,19 +263,17 @@
                 </ComboBox.ItemTemplate>
             </ComboBox>
             <Button
-                x:Name="btnStop"
                 Grid.Column="8"
                 Width="128"
                 Click="StopButton_Click"
                 Content="停止"
-                IsEnabled="False" />
+                IsEnabled="{Binding CanStop}" />
             <Button
-                x:Name="btnRebuild"
                 Grid.Column="10"
                 Width="128"
                 Click="UpdateButton_Click"
                 Content="更新"
-                IsEnabled="False" />
+                IsEnabled="{Binding CanProcess}" />
         </Grid>
     </Grid>
 </UserControl>

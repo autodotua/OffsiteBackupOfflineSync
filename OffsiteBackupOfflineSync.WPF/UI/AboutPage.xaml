@@ -13,11 +13,14 @@
 
     <Grid Margin="8">
         <ui:SimpleStackPanel
-            Margin="8"
+            Margin="16"
             Orientation="Vertical"
             Spacing="8">
             <TextBlock Text="autodotua" />
             <ui:HyperlinkButton NavigateUri="https://github.com/autodotua/OffsiteBackupOfflineSync">Github</ui:HyperlinkButton>
+            <Button
+                Click="TestButton_Click"
+                Content="生成测试目录" />
         </ui:SimpleStackPanel>
     </Grid>
 </Page>

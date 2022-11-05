@@ -1,17 +1,13 @@
-﻿using System.Windows;
-using System.Windows.Controls;
+﻿using FzLib;
 using Microsoft.WindowsAPICodePack.FzExtension;
-using FzLib;
-using System.ComponentModel;
-using System.IO;
 using ModernWpf.FzExtension.CommonDialog;
-using OffsiteBackupOfflineSync;
-using System.Diagnostics;
-using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
+using OffsiteBackupOfflineSync.WPF.UI;
 using System.Collections.ObjectModel;
-using System.Collections;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -21,23 +17,13 @@ namespace OffsiteBackupOfflineSync.UI
     public partial class FilesGoHome : UserControl
     {
         private readonly FilesGoHomeUtility u = new FilesGoHomeUtility();
+
         public FilesGoHome(FilesGoHomeViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
-            u.MessageReceived += (s, e) =>
-            {
-                ViewModel.Message = e.Message;
-            };
-            u.ProgressUpdated += (s, e) =>
-            {
-                if (e.MaxValue != ViewModel.ProgressMax)
-                {
-                    ViewModel.ProgressMax = e.MaxValue;
-                }
-                ViewModel.Progress = e.Value;
-            };
+            PanelHelper.RegisterMessageAndProgressEvent(u, viewModel);
             ViewModel.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName.StartsWith("Display"))
@@ -46,8 +32,8 @@ namespace OffsiteBackupOfflineSync.UI
                 }
             };
         }
-        public FilesGoHomeViewModel ViewModel { get; }
 
+        public FilesGoHomeViewModel ViewModel { get; }
 
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
@@ -73,11 +59,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
-                btnCopyOrMove.IsEnabled = false;
-                btnStop.IsEnabled = true;
-                ViewModel.Message = "正在分析";
-                ViewModel.Working = true;
-                ViewModel.ProgressIndeterminate = true;
+                ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
                     u.FindMatches(ViewModel.TemplateDir, ViewModel.SourceDir,
@@ -85,22 +67,16 @@ namespace OffsiteBackupOfflineSync.UI
                         ViewModel.BlackList, ViewModel.BlackListUseRegex, Configs.MaxTimeTolerance);
                     UpdateList();
                 });
-                btnCopyOrMove.IsEnabled = true;
+                ViewModel.UpdateStatus(ViewModel.Files.Count > 0 ? StatusType.Analyzed : StatusType.Ready);
             }
             catch (OperationCanceledException)
             {
-
+                ViewModel.UpdateStatus(StatusType.Ready);
             }
             catch (Exception ex)
             {
                 await CommonDialog.ShowErrorDialogAsync(ex, "分析失败");
-            }
-            finally
-            {
-                ViewModel.Message = "就绪";
-                ViewModel.Working = false;
-                ViewModel.ProgressIndeterminate = false;
-                btnStop.IsEnabled = false;
+                ViewModel.UpdateStatus(StatusType.Ready);
             }
         }
 
@@ -129,7 +105,6 @@ namespace OffsiteBackupOfflineSync.UI
             {
                 ViewModel.TemplateDir = path;
             }
-
         }
 
         private async void CopyOrMoveButton_Click(object sender, RoutedEventArgs e)
@@ -151,11 +126,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
-                stkConfig.IsEnabled = false;
-                btnStop.IsEnabled = true;
-                btnCopyOrMove.IsEnabled = false;
-                ViewModel.Progress = 0;
-                ViewModel.Working = true;
+                ViewModel.UpdateStatus(StatusType.Processing);
                 int copyMoveIndex = await CommonDialog.ShowSelectItemDialogAsync("请选择复制或是移动",
                        new SelectDialogItem[] {
                         new SelectDialogItem("复制"),
@@ -172,12 +143,9 @@ namespace OffsiteBackupOfflineSync.UI
                 {
                     throw new OperationCanceledException();
                 }
-
-
             }
             catch (OperationCanceledException)
             {
-
             }
             catch (Exception ex)
             {
@@ -185,12 +153,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             finally
             {
-                stkConfig.IsEnabled = true;
-                btnCopyOrMove.IsEnabled = true;
-                btnStop.IsEnabled = false;
-                ViewModel.Message = "就绪";
-                ViewModel.Working = false;
-                ViewModel.Progress = ViewModel.ProgressMax;
+                ViewModel.UpdateStatus(StatusType.Analyzed);
             }
         }
 
@@ -206,7 +169,7 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
-            btnStop.IsEnabled = false;
+            ViewModel.UpdateStatus(StatusType.Stopping);
             u.Stop();
         }
 
@@ -231,7 +194,6 @@ namespace OffsiteBackupOfflineSync.UI
         }
     }
 
-
     public class FilesGoHomeViewModel : ViewModelBase<GoHomeFile>
     {
         private string blackList = "Thumbs.db";
@@ -241,6 +203,7 @@ namespace OffsiteBackupOfflineSync.UI
         private bool displayRightPositon = false;
         private string sourceDir;
         private string templateDir;
+
         public string BlackList
         {
             get => blackList;
@@ -296,5 +259,4 @@ namespace OffsiteBackupOfflineSync.UI
             set => this.SetValueAndNotify(ref templateDir, value, nameof(TemplateDir));
         }
     }
-
 }

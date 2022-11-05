@@ -3,9 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="clr-namespace:OffsiteBackupOfflineSync"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:model="clr-namespace:OffsiteBackupOfflineSync.Model;assembly=OffsiteBackupOfflineSync.Core"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:ui="http://schemas.modernwpf.com/2019"
     d:DesignHeight="450"
@@ -20,11 +18,15 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ui:SimpleStackPanel
-            x:Name="stkConfig"
             Margin="8"
-            IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}"
+            IsEnabled="{Binding CanEditConfigs}"
             Spacing="8">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="8" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="64" />
                     <ColumnDefinition Width="8" />
@@ -42,22 +44,17 @@
                     Grid.Column="4"
                     Click="BrowseSourceDirButton_Click"
                     Content="浏览" />
-            </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+
                 <TextBlock
+                    Grid.Row="2"
                     VerticalAlignment="Center"
                     Text="目标目录：" />
                 <TextBox
+                    Grid.Row="2"
                     Grid.Column="2"
                     Text="{Binding DestDir}" />
                 <Button
+                    Grid.Row="2"
                     Grid.Column="4"
                     Click="BrowseDestDirButton_Click"
                     Content="浏览" />
@@ -130,9 +127,6 @@
                         CanUserResize="False"
                         Header="大小"
                         IsReadOnly="True" />
-
-
-
                 </DataGrid.Columns>
             </DataGrid>
             <ui:SimpleStackPanel
@@ -143,12 +137,10 @@
                 Spacing="8">
                 <TextBlock VerticalAlignment="Center">
                     <Run Text="共" />
-                    <Run Text="{Binding UpdateFiles.Count, Mode=OneWay}" />
+                    <Run Text="{Binding Files.Count, Mode=OneWay}" />
                     <Run Text="个文件" />
                 </TextBlock>
-
             </ui:SimpleStackPanel>
-
         </Grid>
         <Grid
             Grid.Row="99"
@@ -175,19 +167,17 @@
                 Value="{Binding Progress}" />
 
             <Button
-                x:Name="btnStop"
                 Grid.Column="4"
                 Width="128"
                 Click="StopButton_Click"
                 Content="停止"
-                IsEnabled="False" />
+                IsEnabled="{Binding CanStop}" />
             <Button
-                x:Name="btnCreate"
                 Grid.Column="6"
                 Width="128"
                 Click="CreateButton_Click"
                 Content="创建"
-                IsEnabled="False" />
+                IsEnabled="{Binding CanProcess}" />
         </Grid>
     </Grid>
 </UserControl>

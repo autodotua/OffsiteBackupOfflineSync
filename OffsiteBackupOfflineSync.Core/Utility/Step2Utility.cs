@@ -23,6 +23,7 @@ namespace OffsiteBackupOfflineSync.Utility
         /// <param name="maxTimeTolerance">对比时修改时间容差</param>
         public void Search(string localDir, string offsiteSnapshotFile, string blackList, bool blackListUseRegex, double maxTimeTolerance)
         {
+            stopping = false;
             this.localDir = localDir;
             UpdateFiles.Clear();
             LocalDirectories.Clear();
@@ -42,10 +43,17 @@ namespace OffsiteBackupOfflineSync.Utility
                     continue;
                 }
 
-                InvokeMessageReceivedEvent($"正在查找 {dir}");
+                InvokeMessageReceivedEvent($"正在查找：{dir}");
                 var localFileList = dir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
-                Parallel.ForEach(localFileList, file =>
+                Parallel.ForEach(localFileList, (file,state) =>
                 {
+#if DEBUG
+                    TestUtility.SleepInDebug();
+#endif
+                    if(stopping)
+                    {
+                        state.Break();
+                    }
                     string relativePath = Path.GetRelativePath(localDir, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
                     localFiles.TryAdd(relativePath, 0);
@@ -91,6 +99,10 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                 });
 
+                if (stopping)
+                {
+                    throw new OperationCanceledException();
+                }
                 LocalDirectories.Add(dir.Name);
                 foreach (var subDir in dir.EnumerateDirectories("*", SearchOption.AllDirectories))
                 {
@@ -129,11 +141,18 @@ namespace OffsiteBackupOfflineSync.Utility
             long length = 0;
             foreach (var file in files)
             {
+                if (stopping)
+                {
+                    throw new OperationCanceledException();
+                }
+#if DEBUG
+                TestUtility.SleepInDebug();
+#endif
                 if (file.UpdateType != FileUpdateType.Delete)
                 {
                     string name = Guid.NewGuid().ToString();
                     file.TempName = name;
-                    InvokeMessageReceivedEvent($"正在复制 {file.Path}");
+                    InvokeMessageReceivedEvent($"正在复制：{file.Path}");
                     string sourceFile = Path.Combine(localDir, file.Path);
                     string destFile = Path.Combine(outputDir, name);
                     if (hardLink)
@@ -147,10 +166,6 @@ namespace OffsiteBackupOfflineSync.Utility
                     InvokeProgressReceivedEvent(length += file.Length, totalLength);
                 }
                 file.Complete = true;
-                if (stopping)
-                {
-                    throw new OperationCanceledException();
-                }
             }
 
             Step2Model model = new Step2Model()

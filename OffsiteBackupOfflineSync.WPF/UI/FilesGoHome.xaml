@@ -73,8 +73,6 @@
                         Grid.Row="8"
                         Grid.Column="2"
                         Text="{Binding Template.LastWriteTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
-
-
                 </Grid>
                 <Grid Grid.Column="2">
                     <Grid.ColumnDefinitions>
@@ -130,10 +128,7 @@
                         Grid.Row="8"
                         Grid.Column="2"
                         Text="{Binding LastWriteTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
-
-
                 </Grid>
-
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -146,11 +141,17 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ui:SimpleStackPanel
-            x:Name="stkConfig"
             Margin="8"
-            IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}"
+            IsEnabled="{Binding CanEditConfigs}"
             Spacing="8">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="8" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="8" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="64" />
                     <ColumnDefinition Width="8" />
@@ -168,41 +169,31 @@
                     Grid.Column="4"
                     Click="BrowseTemplateDirButton_Click"
                     Content="浏览" />
-            </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+
                 <TextBlock
+                    Grid.Row="2"
                     VerticalAlignment="Center"
                     Text="源目录：" />
                 <TextBox
+                    Grid.Row="2"
                     Grid.Column="2"
                     Text="{Binding SourceDir, UpdateSourceTrigger=PropertyChanged}" />
                 <Button
+                    Grid.Row="2"
                     Grid.Column="4"
                     Click="BrowseSourceDirButton_Click"
                     Content="浏览" />
-            </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+
                 <TextBlock
+                    Grid.Row="4"
                     VerticalAlignment="Center"
                     Text="目标目录：" />
                 <TextBox
+                    Grid.Row="4"
                     Grid.Column="2"
                     Text="{Binding DestDir}" />
                 <Button
+                    Grid.Row="4"
                     Grid.Column="4"
                     Click="BrowseDestDirButton_Click"
                     Content="浏览" />
@@ -264,19 +255,21 @@
                 CanUserReorderColumns="True"
                 ItemsSource="{Binding Files}"
                 RowDetailsTemplate="{StaticResource DataGridDetailTemplate}">
-                <!--<DataGrid.Resources>
-                    <Style TargetType="{x:Type DataGridCell}">
-                        <Setter Property="IsEnabled" Value="{Binding RightPosition, Converter={StaticResource InverseBoolConverter}}" />
-                    </Style>
-                </DataGrid.Resources>-->
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn
                         Binding="{Binding Checked, UpdateSourceTrigger=PropertyChanged}"
                         CanUserReorder="False"
                         CanUserResize="False"
                         CanUserSort="False"
-                        Header="应用"
-                        IsReadOnly="{Binding ElementName=root, Path=DataContext.Working}" />
+                        Header="应用">
+                        <DataGridCheckBoxColumn.CellStyle>
+                            <Style
+                                BasedOn="{StaticResource DataGridCellStyle}"
+                                TargetType="{x:Type DataGridCell}">
+                                <Setter Property="UIElement.IsEnabled" Value="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=DataContext.CanEditConfigs}" />
+                            </Style>
+                        </DataGridCheckBoxColumn.CellStyle>
+                    </DataGridCheckBoxColumn>
                     <DataGridTemplateColumn
                         CanUserResize="False"
                         Header="完成">
@@ -336,8 +329,6 @@
                                             <Setter TargetName="e" Property="ToolTip" Value="源文件对应多个模板文件，请仔细甄别" />
                                         </MultiDataTrigger.Setters>
                                     </MultiDataTrigger>
-
-
                                 </DataTemplate.Triggers>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -378,8 +369,6 @@
                         CanUserResize="False"
                         Header="信息"
                         IsReadOnly="True" />
-
-
                 </DataGrid.Columns>
             </DataGrid>
             <ui:SimpleStackPanel
@@ -416,19 +405,17 @@
                 <Button
                     HorizontalAlignment="Stretch"
                     Click="SelectAllButton_Click"
-                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}">
+                    IsEnabled="{Binding CanEditConfigs}">
                     <ui:SymbolIcon Symbol="SelectAll" />
                 </Button>
                 <Button
                     Grid.Column="2"
                     HorizontalAlignment="Stretch"
                     Click="SelectNoneButton_Click"
-                    IsEnabled="{Binding Working, Converter={StaticResource InverseBoolConverter}}">
+                    IsEnabled="{Binding CanEditConfigs}">
                     <ui:SymbolIcon Symbol="ClearSelection" />
                 </Button>
-
             </ui:SimpleStackPanel>
-
         </Grid>
         <Grid
             Grid.Row="99"
@@ -455,19 +442,17 @@
                 Value="{Binding Progress}" />
 
             <Button
-                x:Name="btnStop"
                 Grid.Column="4"
                 Width="128"
                 Click="StopButton_Click"
                 Content="停止"
-                IsEnabled="False" />
+                IsEnabled="{Binding CanStop}" />
             <Button
-                x:Name="btnCopyOrMove"
                 Grid.Column="6"
                 Width="128"
                 Click="CopyOrMoveButton_Click"
                 Content="复制/移动"
-                IsEnabled="False" />
+                IsEnabled="{Binding CanProcess}" />
         </Grid>
     </Grid>
 </UserControl>

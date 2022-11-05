@@ -1,17 +1,14 @@
-﻿using System.Windows;
-using System.Windows.Controls;
+﻿using FzLib;
 using Microsoft.WindowsAPICodePack.FzExtension;
-using FzLib;
-using System.ComponentModel;
-using System.IO;
 using ModernWpf.FzExtension.CommonDialog;
-using OffsiteBackupOfflineSync;
-using System.Diagnostics;
-using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
-using System.Collections.ObjectModel;
+using OffsiteBackupOfflineSync.WPF.UI;
 using System.Collections;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -21,32 +18,22 @@ namespace OffsiteBackupOfflineSync.UI
     public partial class Step3 : UserControl
     {
         private readonly Step3Utility u = new Step3Utility();
+
         public Step3(Step3ViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
-            u.MessageReceived += (s, e) =>
-            {
-                ViewModel.Message = e.Message;
-            };
-            u.ProgressUpdated += (s, e) =>
-            {
-                if (e.MaxValue != ViewModel.ProgressMax)
-                {
-                    ViewModel.ProgressMax = e.MaxValue;
-                }
-                ViewModel.Progress = e.Value;
-            };
+            PanelHelper.RegisterMessageAndProgressEvent(u, viewModel);
         }
-        public Step3ViewModel ViewModel { get; } 
 
+        public Step3ViewModel ViewModel { get; }
 
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(ViewModel.OffsiteDir))
             {
-                await CommonDialog.ShowErrorDialogAsync("异地目录为空");
+                await CommonDialog.ShowErrorDialogAsync("未设置异地目录");
                 return;
             }
             if (!Directory.Exists(ViewModel.OffsiteDir))
@@ -56,7 +43,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             if (string.IsNullOrEmpty(ViewModel.PatchDir))
             {
-                await CommonDialog.ShowErrorDialogAsync("补丁目录为空");
+                await CommonDialog.ShowErrorDialogAsync("未设置补丁目录");
                 return;
             }
             if (!Directory.Exists(ViewModel.PatchDir))
@@ -66,27 +53,24 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
-                btnRebuild.IsEnabled = false;
-                ViewModel.Message = "正在分析";
-                ViewModel.Working = true;
+                ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
                     u.Analyze(ViewModel.PatchDir, ViewModel.OffsiteDir);
                     ViewModel.Files = new ObservableCollection<SyncFile>(u.UpdateFiles); ;
                 });
-                btnRebuild.IsEnabled = true;
+                ViewModel.UpdateStatus(ViewModel.Files.Count > 0 ? StatusType.Analyzed : StatusType.Ready);
+            }
+            catch (OperationCanceledException)
+            {
+                ViewModel.UpdateStatus(StatusType.Ready);
             }
             catch (Exception ex)
             {
                 await CommonDialog.ShowErrorDialogAsync(ex, "分析失败");
-            }
-            finally
-            {
-                ViewModel.Message = "就绪";
-                ViewModel.Working = false;
+                ViewModel.UpdateStatus(StatusType.Ready);
             }
         }
-
 
         private void BrowseOffsiteDirButton_Click(object sender, RoutedEventArgs e)
         {
@@ -106,15 +90,27 @@ namespace OffsiteBackupOfflineSync.UI
             }
         }
 
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Files?.ForEach(p => p.Checked = true);
+        }
+
+        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Files?.ForEach(p => p.Checked = false);
+        }
+
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.UpdateStatus(StatusType.Stopping);
+            u.Stop();
+        }
+
         private async void UpdateButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                stkConfig.IsEnabled = false;
-                btnStop.IsEnabled = true;
-                btnRebuild.IsEnabled = false;
-                ViewModel.Progress = 0;
-                ViewModel.Working = true;
+                ViewModel.UpdateStatus(StatusType.Processing);
                 string deletedDir = Path.Combine(ViewModel.OffsiteDir, ViewModel.DeletedDir,
                       DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
                 await Task.Run(() =>
@@ -135,7 +131,6 @@ namespace OffsiteBackupOfflineSync.UI
             }
             catch (OperationCanceledException)
             {
-
             }
             catch (Exception ex)
             {
@@ -143,32 +138,10 @@ namespace OffsiteBackupOfflineSync.UI
             }
             finally
             {
-                stkConfig.IsEnabled = true;
-                btnRebuild.IsEnabled = true;
-                btnStop.IsEnabled = false;
-                ViewModel.Message = "就绪";
-                ViewModel.Working = false;
-                ViewModel.Progress = ViewModel.ProgressMax;
+                ViewModel.UpdateStatus(StatusType.Analyzed);
             }
         }
-
-        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.Files?.ForEach(p => p.Checked = true);
-        }
-
-        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.Files?.ForEach(p => p.Checked = false);
-        }
-
-        private void StopButton_Click(object sender, RoutedEventArgs e)
-        {
-            btnStop.IsEnabled = false;
-            u.Stop();
-        }
     }
-
 
     public class Step3ViewModel : ViewModelBase<SyncFile>
     {
@@ -176,6 +149,7 @@ namespace OffsiteBackupOfflineSync.UI
         private string offsiteDir;
         private string patchDir;
         public string DeletedDir { get; set; } = "被删除和替换的文件备份";
+
         public DeleteMode DeleteMode
         {
             get => deleteMode;
@@ -189,11 +163,11 @@ namespace OffsiteBackupOfflineSync.UI
             get => offsiteDir;
             set => this.SetValueAndNotify(ref offsiteDir, value, nameof(OffsiteDir));
         }
+
         public string PatchDir
         {
             get => patchDir;
             set => this.SetValueAndNotify(ref patchDir, value, nameof(PatchDir));
         }
     }
-
 }

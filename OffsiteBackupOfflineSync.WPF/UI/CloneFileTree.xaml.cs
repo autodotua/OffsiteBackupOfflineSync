@@ -1,17 +1,13 @@
-﻿using System.Windows;
-using System.Windows.Controls;
+﻿using FzLib;
 using Microsoft.WindowsAPICodePack.FzExtension;
-using FzLib;
-using System.ComponentModel;
-using System.IO;
 using ModernWpf.FzExtension.CommonDialog;
-using OffsiteBackupOfflineSync;
-using System.Diagnostics;
-using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
+using OffsiteBackupOfflineSync.WPF.UI;
 using System.Collections.ObjectModel;
-using System.Collections;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -21,26 +17,16 @@ namespace OffsiteBackupOfflineSync.UI
     public partial class CloneFileTree : UserControl
     {
         private readonly CloneFileTreeUtility u = new CloneFileTreeUtility();
+
         public CloneFileTree(CloneFileTreeViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
-            u.MessageReceived += (s, e) =>
-            {
-                ViewModel.Message = e.Message;
-            };
-            u.ProgressUpdated += (s, e) =>
-            {
-                if (e.MaxValue != ViewModel.ProgressMax)
-                {
-                    ViewModel.ProgressMax = e.MaxValue;
-                }
-                ViewModel.Progress = e.Value;
-            };
+            PanelHelper.RegisterMessageAndProgressEvent(u, viewModel);
         }
-        public CloneFileTreeViewModel ViewModel { get; }
 
+        public CloneFileTreeViewModel ViewModel { get; }
 
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
@@ -66,35 +52,24 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
-                btnCreate.IsEnabled = false;
-                btnStop.IsEnabled = true;
-                ViewModel.Message = "正在分析";
-                ViewModel.Working = true;
-                ViewModel.ProgressIndeterminate = true;
+                ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
                     u.EnumerateAllFiles(ViewModel.SourceDir);
                     ViewModel.Files = new ObservableCollection<FileTreeFile>(u.Files); ;
                 });
-                btnCreate.IsEnabled = true;
+                ViewModel.UpdateStatus(ViewModel.Files.Count > 0 ? StatusType.Analyzed : StatusType.Ready);
             }
             catch (OperationCanceledException)
             {
-
+                ViewModel.UpdateStatus(StatusType.Ready);
             }
             catch (Exception ex)
             {
                 await CommonDialog.ShowErrorDialogAsync(ex, "分析失败");
-            }
-            finally
-            {
-                ViewModel.Message = "就绪";
-                ViewModel.Working = false;
-                ViewModel.ProgressIndeterminate = false;
-                btnStop.IsEnabled = false;
+                ViewModel.UpdateStatus(StatusType.Ready);
             }
         }
-
 
         private void BrowseDestDirButton_Click(object sender, RoutedEventArgs e)
         {
@@ -118,20 +93,14 @@ namespace OffsiteBackupOfflineSync.UI
         {
             try
             {
-                stkConfig.IsEnabled = false;
-                btnStop.IsEnabled = true;
-                btnCreate.IsEnabled = false;
-                ViewModel.Progress = 0;
-                ViewModel.Working = true;
+                ViewModel.UpdateStatus(StatusType.Processing);
                 await Task.Run(() =>
                 {
                     u.CloneFiles(ViewModel.DestDir);
                 });
-
             }
             catch (OperationCanceledException)
             {
-
             }
             catch (Exception ex)
             {
@@ -139,38 +108,31 @@ namespace OffsiteBackupOfflineSync.UI
             }
             finally
             {
-                stkConfig.IsEnabled = true;
-                btnCreate.IsEnabled = true;
-                btnStop.IsEnabled = false;
-                ViewModel.Message = "就绪";
-                ViewModel.Working = false;
-                ViewModel.Progress = ViewModel.ProgressMax;
+                ViewModel.UpdateStatus(StatusType.Analyzed);
             }
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
-            btnStop.IsEnabled = false;
+            ViewModel.UpdateStatus(StatusType.Stopping);
             u.Stop();
         }
     }
 
-
-    public class CloneFileTreeViewModel :ViewModelBase<FileTreeFile>
+    public class CloneFileTreeViewModel : ViewModelBase<FileTreeFile>
     {
-        private string sourceDir;
         private string destDir;
+        private string sourceDir;
+        public string DestDir
+        {
+            get => destDir;
+            set => this.SetValueAndNotify(ref destDir, value, nameof(DestDir));
+        }
 
         public string SourceDir
         {
             get => sourceDir;
             set => this.SetValueAndNotify(ref sourceDir, value, nameof(SourceDir));
         }
-        public string DestDir
-        {
-            get => destDir;
-            set => this.SetValueAndNotify(ref destDir, value, nameof(DestDir));
-        }
     }
-
 }

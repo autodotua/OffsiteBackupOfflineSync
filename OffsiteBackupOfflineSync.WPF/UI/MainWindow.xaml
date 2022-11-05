@@ -33,7 +33,6 @@
         <ui:NavigationView.FooterMenuItems>
             <ui:NavigationViewItem Content="文件结构克隆" />
             <ui:NavigationViewItem Content="文件归位" />
-            
         </ui:NavigationView.FooterMenuItems>
         <ui:Frame x:Name="frame" />
     </ui:NavigationView>
