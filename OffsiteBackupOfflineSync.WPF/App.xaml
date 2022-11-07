@@ -21,7 +21,7 @@
                 <Setter Property="HorizontalAlignment" Value="Left" />
                 <Setter Property="Margin" Value="8,4" />
             </Style>
-            <Style
+            <!--<Style
                 BasedOn="{StaticResource DataGridCellStyle}"
                 TargetType="{x:Type DataGridCell}" />
             <Style
@@ -39,7 +39,7 @@
                         </MultiTrigger.Setters>
                     </MultiTrigger>
                 </Style.Triggers>
-            </Style>
+            </Style>-->
         </ResourceDictionary>
     </Application.Resources>
 </Application>

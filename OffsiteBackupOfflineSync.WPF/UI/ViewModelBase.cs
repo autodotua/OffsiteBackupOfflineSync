@@ -95,7 +95,11 @@ namespace OffsiteBackupOfflineSync.UI
         public double Progress
         {
             get => progress;
-            set => this.SetValueAndNotify(ref progress, value, nameof(Progress));
+            set
+            {
+                this.SetValueAndNotify(ref progress, value, nameof(Progress));
+                ProgressIndeterminate = false;
+            }
         }
 
         [JsonIgnore]
@@ -120,6 +124,7 @@ namespace OffsiteBackupOfflineSync.UI
             CanEditConfigs = status is StatusType.Ready or StatusType.Analyzed;
             Message = status is StatusType.Ready or StatusType.Analyzed ? "就绪" : "处理中";
             Progress = 0;
+            ProgressIndeterminate = status is StatusType.Analyzing or StatusType.Processing or StatusType.Stopping;
         }
 
         private void AddFileCheckedNotify(FileBase file)

@@ -52,7 +52,7 @@ namespace OffsiteBackupOfflineSync.Utility
 #endif
                     if(stopping)
                     {
-                        state.Break();
+                        state.Stop();
                     }
                     string relativePath = Path.GetRelativePath(localDir, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");

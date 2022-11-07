@@ -120,20 +120,20 @@
                 CanUserReorderColumns="True"
                 ItemsSource="{Binding Files}">
                 <DataGrid.Columns>
-                    <DataGridCheckBoxColumn
-                        Binding="{Binding Checked, UpdateSourceTrigger=PropertyChanged}"
+                    <DataGridTemplateColumn
+                        Width="36"
                         CanUserReorder="False"
                         CanUserResize="False"
-                        CanUserSort="False"
-                        Header="应用">
-                        <DataGridCheckBoxColumn.CellStyle>
-                            <Style
-                                BasedOn="{StaticResource DataGridCellStyle}"
-                                TargetType="{x:Type DataGridCell}">
-                                <Setter Property="UIElement.IsEnabled" Value="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=DataContext.CanEditConfigs}" />
-                            </Style>
-                        </DataGridCheckBoxColumn.CellStyle>
-                    </DataGridCheckBoxColumn>
+                        CanUserSort="False">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox
+                                    Margin="8,0"
+                                    IsChecked="{Binding Checked, UpdateSourceTrigger=PropertyChanged}"
+                                    IsEnabled="{Binding DataContext.CanEditConfigs, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTemplateColumn
                         CanUserResize="False"
                         Header="完成">
@@ -282,6 +282,7 @@
             <ProgressBar
                 Grid.Column="2"
                 VerticalAlignment="Center"
+                IsIndeterminate="{Binding ProgressIndeterminate}"
                 Maximum="{Binding ProgressMax}"
                 Value="{Binding Progress}" />
             <CheckBox

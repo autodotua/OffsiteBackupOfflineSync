@@ -25,14 +25,13 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     if(stopping)
                     {
-                        state.Break();
+                        state.Stop();
                     }
                     tempFiles[i] = new SyncFile(files[i], dir); //使用索引，一对一映射文件和数组元素的关系
 #if DEBUG
                     TestUtility.SleepInDebug();
 #endif
                     InvokeMessageReceivedEvent($"正在加入：{dir}，已加入 {++index} 个文件");
-                    InvokeProgressReceivedEvent(index, files.Count);
                 });
                 if (stopping)
                 {
