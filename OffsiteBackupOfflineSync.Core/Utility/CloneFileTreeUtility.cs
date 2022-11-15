@@ -35,10 +35,13 @@ namespace OffsiteBackupOfflineSync.Utility
                 InvokeProgressReceivedEvent(++index, Files.Length);
                 try
                 {
-                    using FileStream fs = File.Create(newPath);
-                    MarkAsSparseFile(fs.SafeFileHandle);
-                    fs.SetLength(file.Length);
-                    fs.Seek(-1, SeekOrigin.End);
+                    using (FileStream fs = File.Create(newPath))
+                    {
+                        MarkAsSparseFile(fs.SafeFileHandle);
+                        fs.SetLength(file.Length);
+                        fs.Seek(-1, SeekOrigin.End);
+                    }
+                    File.SetLastWriteTime(newPath, File.GetLastWriteTime(file.Path));
                     file.Complete = true;
                 }
                 catch (Exception ex)
