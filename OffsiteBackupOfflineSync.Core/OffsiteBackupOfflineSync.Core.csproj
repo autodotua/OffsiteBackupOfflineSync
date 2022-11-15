@@ -12,10 +12,10 @@
 
   <ItemGroup>
     <Reference Include="FzCoreLib.Windows">
-      <HintPath>..\..\DiscArchivingTool\libs\FzCoreLib.Windows.dll</HintPath>
+      <HintPath>..\libs\FzCoreLib.Windows.dll</HintPath>
     </Reference>
     <Reference Include="FzStandardLib">
-      <HintPath>..\..\DiscArchivingTool\libs\FzStandardLib.dll</HintPath>
+      <HintPath>..\libs\FzStandardLib.dll</HintPath>
     </Reference>
   </ItemGroup>
 

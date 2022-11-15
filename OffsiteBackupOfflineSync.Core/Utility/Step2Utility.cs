@@ -28,8 +28,7 @@ namespace OffsiteBackupOfflineSync.Utility
             UpdateFiles.Clear();
             LocalDirectories.Clear();
             index = 0;
-            string[] blacks = blackList?.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>(); ;
-            List<Regex> blackRegexs = blacks.Select(p => new Regex(p, RegexOptions.IgnoreCase)).ToList();
+            InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
             ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>(); //临时的多线程需要更新文件列表
             Step1Model offsite = JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(offsiteSnapshotFile));
             Dictionary<string, SyncFile> path2file = offsite.Files.ToDictionary(p => p.Path); //从路径寻找本地文件的字典

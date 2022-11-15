@@ -13,7 +13,7 @@ namespace OffsiteBackupOfflineSync.Utility
     {
         public static void SleepInDebug()
         {
-            Thread.Sleep(1);
+           // Thread.Sleep(1);
         }
         public static Task CreateSyncTestFilesAsync(string dir)
         {

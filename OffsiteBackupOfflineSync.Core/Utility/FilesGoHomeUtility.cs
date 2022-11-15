@@ -29,10 +29,9 @@ namespace OffsiteBackupOfflineSync.Utility
             //初始化变量
             stopping=false; 
             filesGoHomeFiles.Clear();
-            string[] blacks = blackList?.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
-            List<Regex> blackRegexs = blacks.Select(p => new Regex(p, RegexOptions.IgnoreCase)).ToList();
-
+            InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
             int sourceFileCount = 0;
+
             List<FileInfo> notMatchedFiles = new List<FileInfo>();
             List<FileInfo> matchedFiles = new List<FileInfo>();
 

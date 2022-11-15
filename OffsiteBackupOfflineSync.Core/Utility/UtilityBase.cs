@@ -1,4 +1,5 @@
-﻿using OffsiteBackupOfflineSync.Model;
+﻿using FzLib;
+using OffsiteBackupOfflineSync.Model;
 using System;
 using System.Globalization;
 using System.IO;
@@ -9,10 +10,16 @@ namespace OffsiteBackupOfflineSync.Utility
 {
     public class UtilityBase
     {
+        protected TimeSpan oneSecond = TimeSpan.FromSeconds(1);
+
         /// <summary>
         /// 已经收到停止导出信号
         /// </summary>
         protected bool stopping = false;
+        public event EventHandler<MessageEventArgs> MessageReceived;
+
+        public event EventHandler<ProgressUpdatedEventArgs> ProgressUpdated;
+
         /// <summary>
         /// 停止导出（打包）
         /// </summary>
@@ -20,26 +27,6 @@ namespace OffsiteBackupOfflineSync.Utility
         {
             stopping = true;
         }
-        public event EventHandler<MessageEventArgs> MessageReceived;
-
-        public event EventHandler<ProgressUpdatedEventArgs> ProgressUpdated;
-
-        protected void InvokeMessageReceivedEvent(string message)
-        {
-            MessageReceived?.Invoke(this, new MessageEventArgs(message));
-        }
-        protected void InvokeProgressReceivedEvent(long current, long total)
-        {
-            ProgressUpdated?.Invoke(this, new ProgressUpdatedEventArgs(current, total));
-        }
-        protected string GetMD5(string file)
-        {
-            using MD5 md5 = MD5.Create();
-            using var stream = File.OpenRead(file);
-            md5.ComputeHash(stream);
-            return BitConverter.ToString(md5.Hash).Replace("-", "");
-        }
-
         /// <summary>
         /// 复制并获取MD5
         /// </summary>
@@ -93,23 +80,57 @@ namespace OffsiteBackupOfflineSync.Utility
             }
         }
 
+        protected string GetMD5(string file)
+        {
+            using MD5 md5 = MD5.Create();
+            using var stream = File.OpenRead(file);
+            md5.ComputeHash(stream);
+            return BitConverter.ToString(md5.Hash).Replace("-", "");
+        }
+
+        protected void InvokeMessageReceivedEvent(string message)
+        {
+            MessageReceived?.Invoke(this, new MessageEventArgs(message));
+        }
+        protected void InvokeProgressReceivedEvent(long current, long total)
+        {
+            ProgressUpdated?.Invoke(this, new ProgressUpdatedEventArgs(current, total));
+        }
+
+        protected void InitializeBlackList(string blackList, bool blackListUseRegex, out string[] blackStrings, out Regex[] blackRegexs)
+        {
+            blackStrings = blackList?.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+            blackRegexs = null;
+            if (blackListUseRegex)
+            {
+                try
+                {
+                    blackRegexs = blackStrings.Select(p => new Regex(p, RegexOptions.IgnoreCase)).ToArray();
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("黑名单正则解析失败", ex);
+                }
+            }
+        }
         /// <summary>
         /// 文件是否在黑名单中
         /// </summary>
         /// <param name="name">文件名</param>
         /// <param name="path">文件路径</param>
-        /// <param name="balckList">黑名单列表</param>
+        /// <param name="blackList">黑名单列表</param>
         /// <param name="blackRegexs">黑名单正则列表</param>
         /// <param name="blackListUseRegex">是否启用正则</param>
         /// <returns></returns>
-        protected bool IsInBlackList(string name, string path, IList<string> balckList, IList<Regex> blackRegexs, bool blackListUseRegex)
+        protected bool IsInBlackList(string name, string path, IList<string> blackList, IList<Regex> blackRegexs, bool blackListUseRegex)
         {
-            for (int i = 0; i < balckList.Count; i++)
+            for (int i = 0; i < blackList.Count; i++)
             {
                 if (blackListUseRegex) //正则
                 {
-                    if (balckList[i].Contains('\\') || balckList[i].Contains('/')) //目录
+                    if (blackList[i].Contains('\\') || blackList[i].Contains('/')) //目录
                     {
+                        path = path.Replace("\\", "/");
                         if (blackRegexs[i].IsMatch(path))
                         {
                             return true;
@@ -125,9 +146,10 @@ namespace OffsiteBackupOfflineSync.Utility
                 }
                 else
                 {
-                    if (balckList[i].Contains('\\') || balckList[i].Contains('/')) //目录
+                    if (blackList[i].Contains('\\') || blackList[i].Contains('/')) //目录
                     {
-                        if (path.Contains(balckList[i]))
+                        path = path.Replace("\\", "/");
+                        if (path.Contains(blackList[i]))
                         {
                             return true;
                         }
@@ -135,7 +157,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     else //文件
                     {
 
-                        if (name.Contains(balckList[i]))
+                        if (name.Contains(blackList[i]))
                         {
                             return true;
                         }
@@ -144,8 +166,6 @@ namespace OffsiteBackupOfflineSync.Utility
             }
             return false;
         }
-
-      protected  TimeSpan oneSecond = TimeSpan.FromSeconds(1);
         protected DateTime TruncateToSecond(DateTime dateTime)
         {
             if (dateTime == DateTime.MinValue || dateTime == DateTime.MaxValue)
