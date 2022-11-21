@@ -15,7 +15,7 @@ namespace OffsiteBackupOfflineSync.Model
 
         public SyncFile()
         {
-            Checked = true; 
+            Checked = true;
         }
         public SyncFile(FileInfo file, string rootDir) : this()
         {
@@ -27,5 +27,9 @@ namespace OffsiteBackupOfflineSync.Model
 
         public string TempName { get; set; }
         public FileUpdateType UpdateType { get; set; }
+        /// <summary>
+        /// 对于 <see cref="UpdateType"/>为<see cref="FileUpdateType.Move"/> 类型的对象，表示异地的相对路径
+        /// </summary>
+        public string OldPath { get; set; }
     }
 }

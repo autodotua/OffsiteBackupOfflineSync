@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using FzLib.Collection;
+using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
@@ -21,7 +22,7 @@ namespace OffsiteBackupOfflineSync.Utility
         /// <param name="blackList">黑名单</param>
         /// <param name="blackListUseRegex">黑名单是否启用正则</param>
         /// <param name="maxTimeTolerance">对比时修改时间容差</param>
-        public void Search(string localDir, string offsiteSnapshotFile, string blackList, bool blackListUseRegex, double maxTimeTolerance)
+        public void Search(string localDir, string offsiteSnapshotFile, string blackList, bool blackListUseRegex, double maxTimeTolerance, bool checkMoveIgnoreFileName)
         {
             stopping = false;
             this.localDir = localDir;
@@ -31,8 +32,12 @@ namespace OffsiteBackupOfflineSync.Utility
             InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
             ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>(); //临时的多线程需要更新文件列表
             Step1Model offsite = JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(offsiteSnapshotFile));
-            Dictionary<string, SyncFile> path2file = offsite.Files.ToDictionary(p => p.Path); //从路径寻找本地文件的字典
+            Dictionary<string, SyncFile> offsitePath2File = offsite.Files.ToDictionary(p => p.Path); //从路径寻找本地文件的字典
+            Dictionary<string, List<SyncFile>> offsiteName2File = offsite.Files.GroupBy(p => p.Name).ToDictionary(p => p.Key, p => p.ToList());
+            Dictionary<DateTime, List<SyncFile>> offsiteTime2File = offsite.Files.GroupBy(p => p.LastWriteTime).ToDictionary(p => p.Key, p => p.ToList());
+            Dictionary<long, List<SyncFile>> offsiteLength2File = offsite.Files.GroupBy(p => p.Length).ToDictionary(p => p.Key, p => p.ToList());
             ConcurrentDictionary<string, byte> localFiles = new ConcurrentDictionary<string, byte>(); //用于之后寻找差异文件的哈希表
+
 
             //枚举本地文件，寻找离线快照中是否存在相同文件
             foreach (var dir in new DirectoryInfo(localDir).EnumerateDirectories())
@@ -44,12 +49,12 @@ namespace OffsiteBackupOfflineSync.Utility
 
                 InvokeMessageReceivedEvent($"正在查找：{dir}");
                 var localFileList = dir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
-                Parallel.ForEach(localFileList, (file,state) =>
+                Parallel.ForEach(localFileList, (file, state) =>
                 {
 #if DEBUG
                     TestUtility.SleepInDebug();
 #endif
-                    if(stopping)
+                    if (stopping)
                     {
                         state.Stop();
                     }
@@ -60,9 +65,9 @@ namespace OffsiteBackupOfflineSync.Utility
                     {
                         return;
                     }
-                    if (path2file.ContainsKey(relativePath))
+                    if (offsitePath2File.ContainsKey(relativePath))//路径相同，说明是没有变化或者文件被修改
                     {
-                        var offsiteFile = path2file[relativePath];
+                        var offsiteFile = offsitePath2File[relativePath];
                         if ((offsiteFile.LastWriteTime - file.LastWriteTime).Duration().TotalSeconds < maxTimeTolerance
                         && offsiteFile.Length == file.Length)//文件没有发生改动
                         {
@@ -84,17 +89,41 @@ namespace OffsiteBackupOfflineSync.Utility
                         }
                         tempUpdateFiles.Add(newFile);
                     }
-                    else //新增文件
+                    else //新增文件或文件被移动或重命名
                     {
-                        var newFile = new SyncFile()
+                        var sameFiles = !checkMoveIgnoreFileName ?
+                            (offsiteTime2File.GetOrDefault(file.LastWriteTime) ?? Enumerable.Empty<SyncFile>())
+                            .Intersect(offsiteLength2File.GetOrDefault(file.Length) ?? Enumerable.Empty<SyncFile>()) :
+                            (offsiteName2File.GetOrDefault(file.Name) ?? Enumerable.Empty<SyncFile>())
+                             .Intersect(offsiteTime2File.GetOrDefault(file.LastWriteTime) ?? Enumerable.Empty<SyncFile>())
+                             .Intersect(offsiteLength2File.GetOrDefault(file.Length) ?? Enumerable.Empty<SyncFile>());
+                        if (sameFiles.Count() == 1)//存在被移动或重命名的文件，并且为一对一关系
                         {
-                            Path = relativePath,
-                            Name = file.Name,
-                            Length = file.Length,
-                            LastWriteTime = file.LastWriteTime,
-                            UpdateType = FileUpdateType.Add
-                        };
-                        tempUpdateFiles.Add(newFile);
+                            var offsiteMovedFile = sameFiles.First();
+                            var movedFile = new SyncFile()
+                            {
+                                Path = relativePath,
+                                OldPath = offsiteMovedFile.Path,
+                                Name = file.Name,
+                                Length = file.Length,
+                                LastWriteTime = file.LastWriteTime,
+                                UpdateType = FileUpdateType.Move,
+                            };
+                            tempUpdateFiles.Add(movedFile);
+                            localFiles.TryAdd(offsiteMovedFile.Path, 0);//如果被移动了，那么不需要进行删除判断，所以要把异地的文件地址也加入进去。
+                        }
+                        else//新增文件
+                        {
+                            var newFile = new SyncFile()
+                            {
+                                Path = relativePath,
+                                Name = file.Name,
+                                Length = file.Length,
+                                LastWriteTime = file.LastWriteTime,
+                                UpdateType = FileUpdateType.Add
+                            };
+                            tempUpdateFiles.Add(newFile);
+                        }
                     }
                 });
 
@@ -147,7 +176,7 @@ namespace OffsiteBackupOfflineSync.Utility
 #if DEBUG
                 TestUtility.SleepInDebug();
 #endif
-                if (file.UpdateType != FileUpdateType.Delete)
+                if (file.UpdateType is not (FileUpdateType.Delete or FileUpdateType.Move))
                 {
                     string name = Guid.NewGuid().ToString();
                     file.TempName = name;

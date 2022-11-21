@@ -11,5 +11,7 @@ namespace OffsiteBackupOfflineSync.Model
         Modify,
         [Description("删除")]
         Delete,
+        [Description("移动")]
+        Move
     }
 }

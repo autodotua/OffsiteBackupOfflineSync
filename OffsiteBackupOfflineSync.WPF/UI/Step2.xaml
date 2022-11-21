@@ -213,6 +213,12 @@
                                         </DataTrigger.Value>
                                         <Setter Property="TextElement.Foreground" Value="Yellow" />
                                     </DataTrigger>
+                                    <DataTrigger Binding="{Binding UpdateType}">
+                                        <DataTrigger.Value>
+                                            <model:FileUpdateType>Move</model:FileUpdateType>
+                                        </DataTrigger.Value>
+                                        <Setter Property="TextElement.Foreground" Value="Yellow" />
+                                    </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>

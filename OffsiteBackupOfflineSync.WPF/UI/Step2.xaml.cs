@@ -117,7 +117,9 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
-                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot, ViewModel.BlackList, ViewModel.BlackListUseRegex, Configs.MaxTimeTolerance);
+                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot, ViewModel.BlackList, 
+                        ViewModel.BlackListUseRegex, Configs.MaxTimeTolerance,
+                        ViewModel.MoveFileIgnoreName);
                     ViewModel.Files = new ObservableCollection<SyncFile>(u.UpdateFiles);
                 });
                 if (ViewModel.Files.Count == 0)
@@ -164,6 +166,7 @@ namespace OffsiteBackupOfflineSync.UI
         private bool blackListUseRegex;
         private bool hardLink;
         private string localDir;
+        private bool moveFileIgnoreName = true;
         private string offsiteSnapshot;
 
         private string patchDir;
@@ -189,6 +192,12 @@ namespace OffsiteBackupOfflineSync.UI
         {
             get => localDir;
             set => this.SetValueAndNotify(ref localDir, value, nameof(LocalDir));
+        }
+
+        public bool MoveFileIgnoreName
+        {
+            get => moveFileIgnoreName;
+            set => this.SetValueAndNotify(ref moveFileIgnoreName, value, nameof(MoveFileIgnoreName));
         }
 
         public string OffsiteSnapshot

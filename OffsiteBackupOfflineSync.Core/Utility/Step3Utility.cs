@@ -35,39 +35,53 @@ namespace OffsiteBackupOfflineSync.Utility
 #endif
                 string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
                 string target = Path.Combine(offsiteDir, file.Path);
-                InvokeMessageReceivedEvent($"正在处理：{file.Path}");
-                switch (file.UpdateType)
+                string oldPath = file.OldPath == null ? null : Path.Combine(offsiteDir, file.OldPath);
+                if (file.UpdateType is not (FileUpdateType.Delete or FileUpdateType.Move) && !File.Exists(patch))
                 {
-                    case FileUpdateType.Add:
-                        if (File.Exists(target))
-                        {
-                            file.Message = "应当为新增文件，但文件已存在";
-                        }
-                        if (!File.Exists(Path.Combine(patchDir, file.TempName)))
-                        {
-                            file.Message = "补丁文件不存在";
-                        }
-                        break;
-                    case FileUpdateType.Modify:
-                        if (!File.Exists(target))
-                        {
-                            file.Message = "应当为修改后文件，但文件不存在";
-                        }
-                        if (!File.Exists(Path.Combine(patchDir, file.TempName)))
-                        {
-                            file.Message = "补丁文件不存在";
-                        }
-                        break;
-                    case FileUpdateType.Delete:
-                        if (!File.Exists(target))
-                        {
-                            file.Message = "应当为待删除文件，但文件不存在";
-                        }
-                        break;
-                    default:
-                        throw new InvalidEnumArgumentException();
+                    file.Message = "补丁文件不存在";
+                    file.Checked = false;
                 }
-                InvokeProgressReceivedEvent(++index, UpdateFiles.Count) ;
+                else
+                {
+                    InvokeMessageReceivedEvent($"正在处理：{file.Path}");
+                    switch (file.UpdateType)
+                    {
+                        case FileUpdateType.Add:
+                            if (File.Exists(target))
+                            {
+                                file.Message = "应当为新增文件，但文件已存在";
+                            }
+                            break;
+                        case FileUpdateType.Modify:
+                            if (!File.Exists(target))
+                            {
+                                file.Message = "应当为修改后文件，但文件不存在";
+                            }
+                            break;
+                        case FileUpdateType.Delete:
+                            if (!File.Exists(target))
+                            {
+                                file.Message = "应当为待删除文件，但文件不存在";
+                                file.Checked = false;
+                            }
+                            break;
+                        case FileUpdateType.Move:
+                            if (!File.Exists(oldPath))
+                            {
+                                file.Message = "应当为移动后文件，但源文件不存在";
+                                file.Checked = false;
+                            }
+                            else if (File.Exists(target))
+                            {
+                                file.Message = "应当为移动后文件，但目标文件已存在";
+                                file.Checked = false;
+                            }
+                            break;
+                        default:
+                            throw new InvalidEnumArgumentException();
+                    }
+                }
+                InvokeProgressReceivedEvent(++index, UpdateFiles.Count);
             }
 
         }
@@ -90,18 +104,20 @@ namespace OffsiteBackupOfflineSync.Utility
                 TestUtility.SleepInDebug();
 #endif
                 InvokeMessageReceivedEvent($"正在处理：{file.Path}");
-                string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
-                if (file.UpdateType != FileUpdateType.Delete && !File.Exists(patch))
-                {
-                    continue;
-                }
-                string target = Path.Combine(offsiteDir, file.Path);
-                if (!Directory.Exists(Path.GetDirectoryName(target)))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(target));
-                }
+
                 try
                 {
+                    string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
+                    if (file.UpdateType is not (FileUpdateType.Delete or FileUpdateType.Move) && !File.Exists(patch))
+                    {
+                        throw new Exception("补丁文件不存在");
+                    }
+                    string target = Path.Combine(offsiteDir, file.Path);
+                    string oldPath = file.OldPath == null ? null : Path.Combine(offsiteDir, file.OldPath);
+                    if (!Directory.Exists(Path.GetDirectoryName(target)))
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    }
                     switch (file.UpdateType)
                     {
                         case FileUpdateType.Add:
@@ -114,19 +130,29 @@ namespace OffsiteBackupOfflineSync.Utility
                             InvokeProgressReceivedEvent(length += file.Length, totalLength);
                             break;
                         case FileUpdateType.Modify:
-                            if (File.Exists(target))
-                            {
-                                Delete(offsiteDir, target, deletedDir, deleteMode);
-                            }
+                            Delete(offsiteDir, target, deletedDir, deleteMode);
                             File.Copy(patch, target);
                             File.SetLastWriteTime(target, file.LastWriteTime);
                             InvokeProgressReceivedEvent(length += file.Length, totalLength);
                             break;
                         case FileUpdateType.Delete:
-                            if (File.Exists(target))
+                            if (!File.Exists(target))
                             {
-                                Delete(offsiteDir, target, deletedDir, deleteMode);
+                                throw new Exception("应当为待删除文件，但文件不存在");
                             }
+                            Delete(offsiteDir, target, deletedDir, deleteMode);
+                            break;
+
+                        case FileUpdateType.Move:
+                            if (!File.Exists(oldPath))
+                            {
+                                throw new Exception("应当为移动后文件，但源文件不存在");
+                            }
+                            else if (File.Exists(target))
+                            {
+                                throw new Exception("应当为移动后文件，但目标文件已存在");
+                            }
+                            File.Move(oldPath, target);
                             break;
                         default:
                             throw new InvalidEnumArgumentException();
