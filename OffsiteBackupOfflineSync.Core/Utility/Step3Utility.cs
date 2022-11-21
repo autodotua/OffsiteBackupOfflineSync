@@ -35,10 +35,6 @@ namespace OffsiteBackupOfflineSync.Utility
 #endif
                 string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
                 string target = Path.Combine(offsiteDir, file.Path);
-                if (!Directory.Exists(Path.GetDirectoryName(target)))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(target));
-                }
                 InvokeMessageReceivedEvent($"正在处理：{file.Path}");
                 switch (file.UpdateType)
                 {
