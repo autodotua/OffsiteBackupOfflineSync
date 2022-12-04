@@ -344,7 +344,7 @@
                         Width="300"
                         Binding="{Binding Path}"
                         ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
-                        Header="路径"
+                        Header="源路径"
                         IsReadOnly="True" />
 
                     <DataGridTextColumn

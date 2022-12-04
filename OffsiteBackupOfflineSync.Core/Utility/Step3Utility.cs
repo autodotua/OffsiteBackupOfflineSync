@@ -93,6 +93,7 @@ namespace OffsiteBackupOfflineSync.Utility
             long totalLength = updateFiles.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
 
+            InvokeProgressReceivedEvent(0, totalLength);
             //更新文件
             foreach (var file in updateFiles)
             {
@@ -169,6 +170,7 @@ namespace OffsiteBackupOfflineSync.Utility
 
         public void AnalyzeEmptyDirectories(string offsiteDir, DeleteMode deleteMode)
         {
+            InvokeMessageReceivedEvent($"正在查找空目录");
             DeletingDirectories = new List<string>();
             //清理空目录
             foreach (var offsiteTopDir in Directory.EnumerateDirectories(offsiteDir).ToList())
@@ -181,6 +183,10 @@ namespace OffsiteBackupOfflineSync.Utility
 
                 foreach (var offsiteSubDir in Directory.EnumerateDirectories(offsiteTopDir, "*", SearchOption.AllDirectories).ToList())
                 {
+                    if (stopping)
+                    {
+                        throw new OperationCanceledException();
+                    }
                     if (!LocalDirectories.Contains(Path.GetRelativePath(offsiteDir, offsiteSubDir)))//本地已经没有远程的这个目录了
                     {
                         if (!Directory.EnumerateFiles(offsiteSubDir).Any())//并且远程的这个目录是空的

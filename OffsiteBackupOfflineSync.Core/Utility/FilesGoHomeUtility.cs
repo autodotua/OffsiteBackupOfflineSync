@@ -172,7 +172,11 @@ namespace OffsiteBackupOfflineSync.Utility
                             {
                                 matchedFiles.Clear();
                             }
-                            //否则，不需要操作
+                            else//否则，修改为本次匹配的单个文件
+                            {
+                                matchedFiles.Clear();
+                                matchedFiles.Add(f);
+                            }
                         }
                         else if (files is List<FileInfo> list)
                         {
