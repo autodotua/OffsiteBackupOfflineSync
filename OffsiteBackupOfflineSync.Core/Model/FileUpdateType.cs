@@ -4,14 +4,14 @@ namespace OffsiteBackupOfflineSync.Model
 {
     public enum FileUpdateType
     {
-        None,
+        None=0,
         [Description("新增")]
-        Add,
+        Add=1,
         [Description("修改")]
-        Modify,
+        Modify=2,
         [Description("删除")]
-        Delete,
+        Delete=3,
         [Description("移动")]
-        Move
+        Move=4
     }
 }

@@ -65,8 +65,20 @@ namespace OffsiteBackupOfflineSync.UI
             }
             if (string.IsNullOrWhiteSpace(ViewModel.OutputFile))
             {
-                await CommonDialog.ShowErrorDialogAsync("未设置输出文件");
-                return;
+                string name = $"{DateTime.Now:yyyyMMdd}-";
+                name += GetVolumeName(name);
+                string path = new FileFilterCollection().Add("异地备份快照", "obos1")
+                   .CreateSaveFileDialog()
+                   .SetDefault(name)
+                   .GetFilePath();
+                if (path != null)
+                {
+                    ViewModel.OutputFile = path;
+                }
+                else
+                {
+                    return;
+                }
             }
 
             ViewModel.SelectedDirectoriesHistory.AddOrSetValue(ViewModel.Dir, dirs);
@@ -190,6 +202,7 @@ namespace OffsiteBackupOfflineSync.UI
             get => dirs;
             set => this.SetValueAndNotify(ref dirs, value, nameof(Dirs));
         }
+        [JsonIgnore]
         public string OutputFile
         {
             get => outputFile;

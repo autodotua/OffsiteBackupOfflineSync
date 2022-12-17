@@ -60,18 +60,22 @@ namespace OffsiteBackupOfflineSync.UI
         public int DeletedFileCount => Files?.Cast<SyncFile>().Where(p => p.UpdateType == FileUpdateType.Delete && p.Checked)?.Count() ?? 0;
 
         [JsonIgnore]
+        public int MovedFileCount => Files?.Cast<SyncFile>().Where(p => p.UpdateType == FileUpdateType.Move && p.Checked)?.Count() ?? 0;
+
+        [JsonIgnore]
         public ObservableCollection<T> Files
         {
             get => files;
             set
             {
                 this.SetValueAndNotify(ref files, value,
-                nameof(Files), 
-                nameof(AddedFileLength), 
-                nameof(AddedFileCount), 
-                nameof(ModifiedFileCount), 
-                nameof(ModifiedFileLength), 
-                nameof(DeletedFileCount), 
+                nameof(Files),
+                nameof(AddedFileLength),
+                nameof(AddedFileCount),
+                nameof(ModifiedFileCount),
+                nameof(ModifiedFileLength),
+                nameof(DeletedFileCount),
+                nameof(MovedFileCount),
                 nameof(CheckedFileCount));
 
                 value.ForEach(p => AddFileCheckedNotify(p));
@@ -139,15 +143,19 @@ namespace OffsiteBackupOfflineSync.UI
                         switch (syncFile.UpdateType)
                         {
                             case FileUpdateType.Add:
-                                this.Notify(nameof(AddedFileCount),nameof(AddedFileLength));
+                                this.Notify(nameof(AddedFileCount), nameof(AddedFileLength));
                                 break;
 
                             case FileUpdateType.Modify:
-                                this.Notify(nameof(ModifiedFileCount),nameof(ModifiedFileLength));
+                                this.Notify(nameof(ModifiedFileCount), nameof(ModifiedFileLength));
                                 break;
 
                             case FileUpdateType.Delete:
                                 this.Notify(nameof(DeletedFileCount));
+                                break;
+
+                            case FileUpdateType.Move:
+                                this.Notify(nameof(MovedFileCount));
                                 break;
 
                             default:

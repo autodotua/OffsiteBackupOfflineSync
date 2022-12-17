@@ -95,8 +95,9 @@ namespace OffsiteBackupOfflineSync.Utility
 
             InvokeProgressReceivedEvent(0, totalLength);
             //更新文件
-            foreach (var file in updateFiles)
+            foreach (var file in updateFiles.OrderByDescending(p=>p.UpdateType))
             {
+                //先处理移动，然后处理修改，这样能避免一些问题（2022-12-17）
                 if (stopping)
                 {
                     throw new OperationCanceledException();
@@ -131,7 +132,10 @@ namespace OffsiteBackupOfflineSync.Utility
                             InvokeProgressReceivedEvent(length += file.Length, totalLength);
                             break;
                         case FileUpdateType.Modify:
-                            Delete(offsiteDir, target, deletedDir, deleteMode);
+                            if (File.Exists(target))
+                            {
+                                Delete(offsiteDir, target, deletedDir, deleteMode);
+                            }
                             File.Copy(patch, target);
                             File.SetLastWriteTime(target, file.LastWriteTime);
                             InvokeProgressReceivedEvent(length += file.Length, totalLength);
