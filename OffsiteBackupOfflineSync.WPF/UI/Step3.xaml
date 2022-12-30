@@ -127,7 +127,7 @@
                         Header="文件名"
                         IsReadOnly="True" />
                     <DataGridTextColumn
-                        Width="300"
+                        Width="400"
                         Binding="{Binding Path}"
                         ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="路径"

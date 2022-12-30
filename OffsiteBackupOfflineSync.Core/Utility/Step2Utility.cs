@@ -3,7 +3,10 @@ using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
@@ -167,6 +170,7 @@ namespace OffsiteBackupOfflineSync.Utility
             var files = UpdateFiles.Where(p => p.Checked).ToList();
             long totalLength = files.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
+            using var sha256 = SHA256.Create();
             foreach (var file in files)
             {
                 if (stopping)
@@ -178,11 +182,30 @@ namespace OffsiteBackupOfflineSync.Utility
 #endif
                 if (file.UpdateType is not (FileUpdateType.Delete or FileUpdateType.Move))
                 {
-                    string name = Guid.NewGuid().ToString();
-                    file.TempName = name;
+                    file.TempName = GetTempFileName(file, sha256);
                     InvokeMessageReceivedEvent($"正在复制：{file.Path}");
                     string sourceFile = Path.Combine(localDir, file.Path);
-                    string destFile = Path.Combine(outputDir, name);
+                    string destFile = Path.Combine(outputDir, file.TempName);
+                    if (File.Exists(destFile))
+                    {
+                        FileInfo existingFile = new FileInfo(destFile);
+                        if (existingFile.Length == file.Length && existingFile.LastWriteTime == file.LastWriteTime)
+                        {
+                            InvokeProgressReceivedEvent(length += file.Length, totalLength);
+                            continue;
+                        }
+                        else
+                        {
+                            try
+                            {
+                                File.Delete(destFile);
+                            }
+                            catch (IOException ex)
+                            {
+                                throw new IOException($"修改时间或长度与待写入文件{file.Path}不同的目标补丁文件{destFile}已存在，但无法删除：{ex.Message}", ex);
+                            }
+                        }
+                    }
                     if (hardLink)
                     {
                         CreateHardLink(destFile, sourceFile);
@@ -204,6 +227,15 @@ namespace OffsiteBackupOfflineSync.Utility
 
             var json = JsonConvert.SerializeObject(model, Formatting.Indented);
             File.WriteAllText(Path.Combine(outputDir, "file.obos2"), json);
+        }
+
+        private string GetTempFileName(SyncFile file, SHA256 sha256)
+        {
+            string featureCode = $"{file.Path}{file.LastWriteTime}{file.Length}";
+
+            var bytes = Encoding.UTF8.GetBytes(featureCode);
+            var code = sha256.ComputeHash(bytes);
+            return Convert.ToHexString(code);
         }
 
         [DllImport("Kernel32.dll", CharSet = CharSet.Unicode)]

@@ -7,11 +7,12 @@ namespace OffsiteBackupOfflineSync.UI
 {
     public partial class MainWindow : Window
     {
+        private readonly CloneFileTree cloneFileTree;
+        private readonly FilesGoHome filesGoHome;
         private readonly Step1 step1;
         private readonly Step2 step2;
         private readonly Step3 step3;
-        private readonly CloneFileTree cloneFileTree;
-        private readonly FilesGoHome filesGoHome;
+        PeriodicTimer saveConfigTimer = new PeriodicTimer(TimeSpan.FromSeconds(10));
 
         public MainWindow()
         {
@@ -26,6 +27,7 @@ namespace OffsiteBackupOfflineSync.UI
             filesGoHome = new FilesGoHome(config.FilesGoHome);
 
             frame.Navigate(step1);
+            StartSaveConfigTimer().ConfigureAwait(false);
         }
 
         private MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
@@ -81,9 +83,17 @@ namespace OffsiteBackupOfflineSync.UI
 
             config.Save();
         }
-
+        private async Task StartSaveConfigTimer()
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            while (await saveConfigTimer.WaitForNextTickAsync())
+            {
+                SaveConfig();
+            }
+        }
         private void Window_Closing(object sender, CancelEventArgs e)
         {
+            saveConfigTimer.Dispose();
             SaveConfig();
         }
     }
