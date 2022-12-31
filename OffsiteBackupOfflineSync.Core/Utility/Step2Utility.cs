@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -212,7 +213,29 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                     else
                     {
-                        File.Copy(sourceFile, destFile);
+                        int tryCount = 10;
+
+                        while (--tryCount > 0)
+                        {
+                            if(tryCount<9&&File.Exists(destFile))
+                            {
+                                File.Delete(destFile);
+                            }
+                            try
+                            {
+                                File.Copy(sourceFile, destFile);
+                                tryCount = 0;
+                            }
+                            catch (IOException ex)
+                            {
+                                Debug.WriteLine($"复制文件{sourceFile}到{destFile}失败：{ex.Message}，剩余{tryCount}次重试");
+                                if(tryCount==0)
+                                {
+                                    throw;
+                                }
+                                Thread.Sleep(1000);
+                            }
+                        }
                     }
                     InvokeProgressReceivedEvent(length += file.Length, totalLength);
                 }
