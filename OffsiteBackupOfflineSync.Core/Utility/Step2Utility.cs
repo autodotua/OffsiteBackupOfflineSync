@@ -161,8 +161,9 @@ namespace OffsiteBackupOfflineSync.Utility
             }
         }
 
-        public void Export(string outputDir, bool hardLink)
+        public bool Export(string outputDir, bool hardLink)
         {
+            bool allOk = true;
             stopping = false;
             if (!Directory.Exists(outputDir))
             {
@@ -209,7 +210,19 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                     if (hardLink)
                     {
-                        CreateHardLink(destFile, sourceFile);
+                        try
+                        {
+                            CreateHardLink(destFile, sourceFile);
+                        }
+                        catch (IOException ex)
+                        {
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            allOk = false;
+                            file.Message = ex.Message;
+                        }
                     }
                     else
                     {
@@ -217,7 +230,7 @@ namespace OffsiteBackupOfflineSync.Utility
 
                         while (--tryCount > 0)
                         {
-                            if(tryCount<9&&File.Exists(destFile))
+                            if (tryCount < 9 && File.Exists(destFile))
                             {
                                 File.Delete(destFile);
                             }
@@ -229,9 +242,10 @@ namespace OffsiteBackupOfflineSync.Utility
                             catch (IOException ex)
                             {
                                 Debug.WriteLine($"复制文件{sourceFile}到{destFile}失败：{ex.Message}，剩余{tryCount}次重试");
-                                if(tryCount==0)
+                                if (tryCount == 0)
                                 {
-                                    throw;
+                                    allOk = false;
+                                    file.Message = ex.Message;
                                 }
                                 Thread.Sleep(1000);
                             }
@@ -250,6 +264,7 @@ namespace OffsiteBackupOfflineSync.Utility
 
             var json = JsonConvert.SerializeObject(model, Formatting.Indented);
             File.WriteAllText(Path.Combine(outputDir, "file.obos2"), json);
+            return allOk;
         }
 
         private string GetTempFileName(SyncFile file, SHA256 sha256)
@@ -261,7 +276,7 @@ namespace OffsiteBackupOfflineSync.Utility
             return Convert.ToHexString(code);
         }
 
-        [DllImport("Kernel32.dll", CharSet = CharSet.Unicode)]
+        [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
 
         private void CreateHardLink(string link, string source)
@@ -284,7 +299,7 @@ namespace OffsiteBackupOfflineSync.Utility
             bool value = CreateHardLink(link, source, IntPtr.Zero);
             if (!value)
             {
-                throw new IOException("未知错误，无法创建硬链接");
+                throw new Exception($"未知错误，无法创建硬链接：" + Marshal.GetLastWin32Error());
             }
         }
     }

@@ -67,26 +67,31 @@ namespace OffsiteBackupOfflineSync.UI
                 await CommonDialog.ShowErrorDialogAsync("未设置导出补丁目录");
                 return;
             }
-                try
+            try
+            {
+                ViewModel.UpdateStatus(StatusType.Processing);
+                bool allOk = true;
+                await Task.Run(() =>
                 {
-                    ViewModel.UpdateStatus(StatusType.Processing);
-                    await Task.Run(() =>
-                    {
-                        u.Export(ViewModel.PatchDir, ViewModel.HardLink);
-                    });
-                }
-                catch (OperationCanceledException)
+                    allOk = u.Export(ViewModel.PatchDir, ViewModel.HardLink);
+                });
+                if (!allOk)
                 {
+                    await CommonDialog.ShowErrorDialogAsync("导出完成，但部分文件出现错误");
                 }
-                catch (Exception ex)
-                {
-                    await CommonDialog.ShowErrorDialogAsync(ex, "导出失败");
-                }
-                finally
-                {
-                    ViewModel.UpdateStatus(StatusType.Analyzed);
-                }
-            
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                await CommonDialog.ShowErrorDialogAsync(ex, "导出失败");
+            }
+            finally
+            {
+                ViewModel.UpdateStatus(StatusType.Analyzed);
+            }
+
         }
 
         private async void SearchChangeButton_Click(object sender, RoutedEventArgs e)
@@ -117,7 +122,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
-                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot, ViewModel.BlackList, 
+                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot, ViewModel.BlackList,
                         ViewModel.BlackListUseRegex, Configs.MaxTimeTolerance,
                         ViewModel.MoveFileIgnoreName);
                     ViewModel.Files = new ObservableCollection<SyncFile>(u.UpdateFiles);
