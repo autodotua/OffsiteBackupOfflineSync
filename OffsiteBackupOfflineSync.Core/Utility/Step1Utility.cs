@@ -39,7 +39,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 }
                 syncFiles.AddRange(tempFiles); //加入临时的数组
                 var dirInfo = new DirectoryInfo(dir);
-                topDirectories.Add(dirInfo.Name);
+                topDirectories.Add(dirInfo.FullName);
             }
             Step1Model model = new Step1Model()
             {
