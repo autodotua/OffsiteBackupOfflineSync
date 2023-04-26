@@ -18,6 +18,7 @@ namespace OffsiteBackupOfflineSync.Utility
         private string localDir;
         private volatile int index = 0;
 
+
         /// <summary>
         /// 搜索
         /// </summary>

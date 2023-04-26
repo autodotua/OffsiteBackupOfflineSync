@@ -7,9 +7,15 @@ namespace OffsiteBackupOfflineSync.Utility
     public class Step1Utility : UtilityBase
     {
         private volatile int index = 0;
-        public void Enumerate(IEnumerable<string> dirs, string jsonPath)
+        public static Step1Model ReadStep1Model(string jsonPath)
         {
-            stopping=false;
+
+            return JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(jsonPath));
+        }
+
+        public Step1Model Enumerate(IEnumerable<string> dirs, string jsonPath)
+        {
+            stopping = false;
             index = 0;
             List<SyncFile> syncFiles = new List<SyncFile>();
             List<string> topDirectories = new List<string>();
@@ -21,9 +27,9 @@ namespace OffsiteBackupOfflineSync.Utility
                     .EnumerateFiles("*", SearchOption.AllDirectories).ToList();
 
                 SyncFile[] tempFiles = new SyncFile[files.Count]; //临时使用数组以实现多线程并加快速度
-                Parallel.For(0, files.Count, (i,state) =>
+                Parallel.For(0, files.Count, (i, state) =>
                 {
-                    if(stopping)
+                    if (stopping)
                     {
                         state.Stop();
                     }
@@ -48,6 +54,7 @@ namespace OffsiteBackupOfflineSync.Utility
             };
             var json = JsonConvert.SerializeObject(model, Formatting.Indented);
             File.WriteAllText(jsonPath, json);
+            return model;
         }
     }
 

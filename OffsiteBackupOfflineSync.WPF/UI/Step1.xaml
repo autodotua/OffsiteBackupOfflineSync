@@ -16,11 +16,6 @@
             <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="16" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
         <ui:SimpleStackPanel
             Margin="8"
             IsEnabled="{Binding CanEditConfigs}"
@@ -37,6 +32,12 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="8" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="32" />
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock
                     VerticalAlignment="Center"
@@ -47,106 +48,91 @@
                 <Button
                     Grid.Column="4"
                     Click="BrowseDirButton_Click"
-                    Content="浏览" />
-            </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+                    Content="浏览.." />
                 <TextBlock
+                    Grid.Column="6"
                     VerticalAlignment="Center"
                     Text="快照文件：" />
                 <TextBox
-                    Grid.Column="2"
+                    Grid.Column="8"
                     Text="{Binding OutputFile}" />
                 <Button
-                    Grid.Column="4"
+                    Grid.Column="10"
                     Click="BrowseOutputFileButton_Click"
-                    Content="浏览" />
+                    Content="浏览.." />
             </Grid>
+
         </ui:SimpleStackPanel>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <GroupBox
+                Header="待添加目录"
+                IsEnabled="{Binding CanEditConfigs}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-        <GroupBox
-            Grid.Row="2"
-            Header="待添加目录"
-            IsEnabled="{Binding CanEditConfigs}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="8" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+                    <ui:ListView
+                        x:Name="lvwSearchingDirs"
+                        ItemsSource="{Binding SearchingDirs}"
+                        SelectionChanged="SearchingDirList_SelectionChanged"
+                        SelectionMode="Multiple" />
+                    <ui:SimpleStackPanel
+                        Grid.Row="2"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Button
+                            Click="SelectAllButton_Click"
+                            Content="全选"
+                            IsEnabled="{Binding SearchingDirs, Converter={StaticResource CountMoreThanZeroConverter}}" />
+                        <Button
+                            Click="SelectNoneButton_Click"
+                            Content="全不选"
+                            IsEnabled="{Binding SearchingDirs, Converter={StaticResource CountMoreThanZeroConverter}}" />
+                    </ui:SimpleStackPanel>
+                </Grid>
+            </GroupBox>
 
-                <ui:ListView
-                    x:Name="lvwSearchingDirs"
-                    ItemsSource="{Binding SearchingDirs}"
-                    SelectionChanged="SearchingDirList_SelectionChanged"
-                    SelectionMode="Multiple" />
-                <ui:SimpleStackPanel
-                    Grid.Row="2"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal"
-                    Spacing="8">
-                    <Button
-                        Click="SelectAllButton_Click"
-                        Content="全选"
-                        IsEnabled="{Binding SearchingDirs, Converter={StaticResource CountMoreThanZeroConverter}}" />
-                    <Button
-                        Click="SelectNoneButton_Click"
-                        Content="全不选"
-                        IsEnabled="{Binding SearchingDirs, Converter={StaticResource CountMoreThanZeroConverter}}" />
-                </ui:SimpleStackPanel>
-            </Grid>
-        </GroupBox>
+            <GroupBox
+                Grid.Column="2"
+                Header="需要同步的目录"
+                IsEnabled="{Binding CanEditConfigs}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-        <!--<ui:SimpleStackPanel Grid.Column="2" Grid.RowSpan="3" VerticalAlignment="Center" Orientation="Vertical" Spacing="8">
-            <Button   IsEnabled="{Binding SearchingDirs, Converter={StaticResource CountMoreThanZeroConverter}}">
-                <ui:FontIcon Glyph="&#xE00F;"/>
-            </Button>
-            <Button >
-                <ui:FontIcon Glyph="&#xE00E;"   IsEnabled="{Binding SearchingDirs, Converter={StaticResource CountMoreThanZeroConverter}}"/>
-            </Button>
-        </ui:SimpleStackPanel>-->
-
-        <GroupBox
-            Grid.RowSpan="3"
-            Grid.Column="2"
-            Header="需要同步的目录"
-            IsEnabled="{Binding CanEditConfigs}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="8" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <ListView
-                    x:Name="lvwSelectedDirs"
-                    ItemsSource="{Binding SyncDirs}" />
-                <ui:SimpleStackPanel
-                    Grid.Row="2"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal"
-                    Spacing="8">
-                    <Button
-                        Click="RemoveSelectedSyncDirsButton_Click"
-                        Content="移除选中项"
-                        IsEnabled="{Binding ElementName=lvwSelectedDirs, Path=SelectedItem, Converter={StaticResource NotNullConverter}}" />
-                    <Button
-                        Click="RemoveAllSyncDirsButton_Click"
-                        Content="移除全部"
-                        IsEnabled="{Binding SelectedDirs, Converter={StaticResource CountMoreThanZeroConverter}}" />
-                </ui:SimpleStackPanel>
-            </Grid>
-        </GroupBox>
-
-        <Grid
-            Grid.Row="99"
-            Grid.ColumnSpan="99">
+                    <ListView
+                        x:Name="lvwSelectedDirs"
+                        ItemsSource="{Binding SyncDirs}" />
+                    <ui:SimpleStackPanel
+                        Grid.Row="2"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Button
+                            Click="RemoveSelectedSyncDirsButton_Click"
+                            Content="移除选中项"
+                            IsEnabled="{Binding ElementName=lvwSelectedDirs, Path=SelectedItem, Converter={StaticResource NotNullConverter}}" />
+                        <Button
+                            Click="RemoveAllSyncDirsButton_Click"
+                            Content="移除全部"
+                            IsEnabled="{Binding SelectedDirs, Converter={StaticResource CountMoreThanZeroConverter}}" />
+                    </ui:SimpleStackPanel>
+                </Grid>
+            </GroupBox>
+        </Grid>
+        <Grid Grid.Row="99">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />

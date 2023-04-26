@@ -13,108 +13,159 @@
     mc:Ignorable="d">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="8" />
             <RowDefinition Height="*" />
             <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ui:SimpleStackPanel
-            Margin="8"
-            IsEnabled="{Binding CanEditConfigs}"
-            Spacing="8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="96" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="8" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="8" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Text="异地快照：" />
-                <TextBox
-                    Grid.Column="2"
-                    Text="{Binding OffsiteSnapshot}" />
-                <Button
-                    Grid.Column="4"
-                    Click="BrowseOffsiteSnapshotButton_Click"
-                    Content="浏览" />
-
-                <TextBlock
-                    Grid.Row="2"
-                    VerticalAlignment="Center"
-                    Text="本地目录：" />
-                <TextBox
-                    Grid.Row="2"
-                    Grid.Column="2"
-                    Text="{Binding LocalDir}" />
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="4"
-                    Click="BrowseLocalDirButton_Click"
-                    Content="浏览" />
-
-                <TextBlock
-                    Grid.Row="4"
-                    VerticalAlignment="Center"
-                    Text="导出补丁目录：" />
-                <TextBox
-                    Grid.Row="4"
-                    Grid.Column="2"
-                    Text="{Binding PatchDir}" />
-                <Button
-                    Grid.Row="4"
-                    Grid.Column="4"
-                    Click="BrowsePatchDirButton_Click"
-                    Content="浏览" />
-            </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="96" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Text="黑名单：" />
-                <TextBox
-                    Grid.Column="2"
-                    ui:ControlHelper.PlaceholderText="可以是文件名，也可以是完整路径；一行一项"
-                    AcceptsReturn="True"
-                    MaxLines="5"
-                    Text="{Binding BlackList}"
-                    VerticalScrollBarVisibility="Auto" />
-                <CheckBox
-                    Grid.Column="4"
-                    VerticalAlignment="Center"
-                    Content="使用正则表达式"
-                    IsChecked="{Binding BlackListUseRegex}" />
-            </Grid>
-            <Grid HorizontalAlignment="Right">
-                <Button
-                    Padding="32,4"
-                    Click="SearchChangeButton_Click"
-                    Content="查找更改" />
-            </Grid>
-        </ui:SimpleStackPanel>
-        <Grid Grid.Row="2">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+        <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <ui:SimpleStackPanel
+                Margin="8"
+                IsEnabled="{Binding CanEditConfigs}"
+                Spacing="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="96" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Text="异地快照文件：" />
+                    <TextBox
+                        Grid.Column="2"
+                        Text="{Binding OffsiteSnapshot}"
+                        TextWrapping="Wrap" />
+                    <Button
+                        Grid.Column="4"
+                        Click="BrowseOffsiteSnapshotButton_Click"
+                        Content="浏览.." />
+
+                    <TextBlock
+                        Grid.Row="2"
+                        VerticalAlignment="Center"
+                        Text="本地搜索目录：" />
+                    <TextBox
+                        Grid.Row="2"
+                        Grid.Column="2"
+                        ui:ControlHelper.PlaceholderText="在选择的目录中搜索需要同步的目录。使用“|”分割多个目录。"
+                        Text="{Binding LocalDir}"
+                        TextWrapping="Wrap" />
+                    <Button
+                        Grid.Row="2"
+                        Grid.Column="4"
+                        Click="BrowseLocalDirButton_Click"
+                        Content="添加.." />
+
+                </Grid>
+                <Grid HorizontalAlignment="Right">
+                    <Button
+                        Padding="32,4"
+                        Click="MatchDirsButton_Click"
+                        Content="匹配目录" />
+                </Grid>
+            </ui:SimpleStackPanel>
+            <DataGrid
+                Grid.Row="2"
+                AutoGenerateColumns="False"
+                CanUserAddRows="False"
+                CanUserReorderColumns="True"
+                ItemsSource="{Binding MatchingDirs}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn
+                        Binding="{Binding OffsiteDir}"
+                        Header="异地目录"
+                        IsReadOnly="True" />
+                    <DataGridTextColumn
+                        Binding="{Binding LocalDir}"
+                        Header="本地目录" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="8" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
+            <ui:SimpleStackPanel
+                Margin="8"
+                IsEnabled="{Binding CanEditConfigs}"
+                Spacing="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="96" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Grid.Row="4"
+                        VerticalAlignment="Center"
+                        Text="导出补丁目录：" />
+                    <TextBox
+                        Grid.Row="4"
+                        Grid.Column="2"
+                        Text="{Binding PatchDir}" />
+                    <Button
+                        Grid.Row="4"
+                        Grid.Column="4"
+                        Click="BrowsePatchDirButton_Click"
+                        Content="浏览.." />
+                </Grid>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="96" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Text="黑名单：" />
+                    <TextBox
+                        Grid.Column="2"
+                        ui:ControlHelper.PlaceholderText="可以是文件名，也可以是完整路径；一行一项"
+                        AcceptsReturn="True"
+                        MaxLines="5"
+                        Text="{Binding BlackList}"
+                        VerticalScrollBarVisibility="Auto" />
+                    <CheckBox
+                        Grid.Column="4"
+                        VerticalAlignment="Center"
+                        Content="使用正则表达式"
+                        IsChecked="{Binding BlackListUseRegex}" />
+                </Grid>
+                <Grid HorizontalAlignment="Right">
+                    <Button
+                        Padding="32,4"
+                        Click="SearchChangeButton_Click"
+                        Content="查找更改" />
+                </Grid>
+            </ui:SimpleStackPanel>
             <DataGrid
+                Grid.Row="2"
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 CanUserReorderColumns="True"
@@ -232,7 +283,7 @@
             </DataGrid>
 
             <ui:SimpleStackPanel
-                Grid.Row="2"
+                Grid.Row="4"
                 Margin="8,0"
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
@@ -270,6 +321,7 @@
         </Grid>
         <Grid
             Grid.Row="99"
+            Grid.ColumnSpan="99"
             Margin="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
