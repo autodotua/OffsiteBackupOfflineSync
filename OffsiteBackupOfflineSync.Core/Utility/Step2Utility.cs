@@ -14,9 +14,9 @@ namespace OffsiteBackupOfflineSync.Utility
     public class Step2Utility : UtilityBase
     {
         public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
-        public List<string> LocalDirectories { get; } = new List<string>();
+        public Dictionary<string,List<string>> LocalDirectories { get; } = new Dictionary<string, List<string>>();
         private volatile int index = 0;
-
+        private IEnumerable<LocalAndOffsiteDir> localAndOffsiteDirs;
 
         /// <summary>
         /// 搜索
@@ -32,6 +32,7 @@ namespace OffsiteBackupOfflineSync.Utility
             UpdateFiles.Clear();
             LocalDirectories.Clear();
             index = 0;
+            this.localAndOffsiteDirs = localAndOffsiteDirs;
 
             InvokeMessageReceivedEvent($"正在初始化");
             InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
@@ -57,9 +58,9 @@ namespace OffsiteBackupOfflineSync.Utility
             //枚举本地文件，寻找离线快照中是否存在相同文件
             foreach (var localAndOffsiteDir in localAndOffsiteDirs)
             {
-                var dir = new DirectoryInfo(localAndOffsiteDir.LocalDir);
-                InvokeMessageReceivedEvent($"正在查找：{dir}");
-                var localFileList = dir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
+                var localDir = new DirectoryInfo(localAndOffsiteDir.LocalDir);
+                InvokeMessageReceivedEvent($"正在查找：{localDir}");
+                var localFileList = localDir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
 
 #if DEBUG
                 foreach (var file in localFileList)
@@ -81,7 +82,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         state.Stop();
 #endif
                     }
-                    string relativePath = Path.GetRelativePath(dir.Parent.FullName, file.FullName);
+                    string relativePath = Path.GetRelativePath(localDir.FullName, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
                     localFiles.TryAdd(relativePath, 0);
                     if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
@@ -168,12 +169,13 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     throw new OperationCanceledException();
                 }
-                LocalDirectories.Add(dir.Name);
-                foreach (var subDir in dir.EnumerateDirectories("*", SearchOption.AllDirectories))
+                List<string> localSubDirs = new List<string>();
+                foreach (var subDir in localDir.EnumerateDirectories("*", SearchOption.AllDirectories))
                 {
-                    string relativePath = Path.GetRelativePath(dir.Parent.FullName, subDir.FullName);
-                    LocalDirectories.Add(relativePath);
+                    string relativePath = Path.GetRelativePath(localDir.FullName, subDir.FullName);
+                    localSubDirs.Add(relativePath);
                 }
+                LocalDirectories.Add(localAndOffsiteDir.OffsiteDir, localSubDirs);
             }
             UpdateFiles.AddRange(tempUpdateFiles);
 
@@ -203,6 +205,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 Directory.CreateDirectory(outputDir);
             }
             var files = UpdateFiles.Where(p => p.Checked).ToList();
+            Dictionary<string, string> offsiteTopDir2LocalDir = localAndOffsiteDirs.ToDictionary(p => p.OffsiteDir, p => p.LocalDir);
             long totalLength = files.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
             using var sha256 = SHA256.Create();
@@ -219,7 +222,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     file.TempName = GetTempFileName(file, sha256);
                     InvokeMessageReceivedEvent($"正在复制：{file.Path}");
-                    string sourceFile = Path.Combine("localDir", file.Path); throw new NotImplementedException();
+                    string sourceFile = Path.Combine(offsiteTopDir2LocalDir[file.TopDirectory], file.Path);
                     string destFile = Path.Combine(outputDir, file.TempName);
                     if (File.Exists(destFile))
                     {

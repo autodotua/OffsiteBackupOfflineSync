@@ -9,7 +9,7 @@ namespace OffsiteBackupOfflineSync.Model
     public class FileBase : INotifyPropertyChanged
     {
         private bool complete;
-        private bool isChecked;
+        private bool isChecked = true;
         private string message;
         public event PropertyChangedEventHandler PropertyChanged;
 

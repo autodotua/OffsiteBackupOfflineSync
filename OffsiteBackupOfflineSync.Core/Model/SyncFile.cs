@@ -12,16 +12,15 @@ namespace OffsiteBackupOfflineSync.Model
 {
     public class SyncFile : FileBase
     {
-
         public SyncFile()
         {
-            Checked = true;
         }
-        public SyncFile(FileInfo file, string rootDir) : this()
+
+        public SyncFile(FileInfo file, string topDir) : this()
         {
             Name = file.Name;
-            Path = System.IO.Path.GetRelativePath(System.IO.Path.GetDirectoryName(rootDir), file.FullName);
-            TopDirectory = rootDir;
+            Path = System.IO.Path.GetRelativePath(topDir, file.FullName);
+            TopDirectory = topDir;
             LastWriteTime = file.LastWriteTime;
             Length = file.Length;
         }
@@ -42,7 +41,7 @@ namespace OffsiteBackupOfflineSync.Model
         public string OldPath { get; set; } 
 
         /// <summary>
-        /// <see cref="SyncFile.Path"/>的最高级目录的真实绝对路径
+        /// 异地中，<see cref="SyncFile.Path"/>的最高级目录的真实绝对路径
         /// </summary>
         public string TopDirectory { get; set; }
     }

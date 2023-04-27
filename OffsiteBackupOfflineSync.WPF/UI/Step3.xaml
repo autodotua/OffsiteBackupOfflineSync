@@ -126,9 +126,10 @@
                         ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="文件名"
                         IsReadOnly="True" />
+                    
                     <DataGridTextColumn
                         Width="400"
-                        Binding="{Binding Path}"
+                        Binding="{Binding .,Converter={StaticResource SyncFilePathConverter}}"
                         ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="路径"
                         IsReadOnly="True" />

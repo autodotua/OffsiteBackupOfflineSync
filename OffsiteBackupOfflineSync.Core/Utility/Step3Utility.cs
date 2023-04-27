@@ -20,7 +20,7 @@ namespace OffsiteBackupOfflineSync.Utility
             var step2 = JsonConvert.DeserializeObject<Step2Model>(json);
 
             UpdateFiles = step2.Files;
-            LocalDirectories = step2.LocalDirectories;
+            LocalDirectories = null; throw new NotImplementedException();// step2.LocalDirectories;
 
             //检查文件
             int index = 0;

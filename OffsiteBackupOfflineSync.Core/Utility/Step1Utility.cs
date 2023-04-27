@@ -18,7 +18,6 @@ namespace OffsiteBackupOfflineSync.Utility
             stopping = false;
             index = 0;
             List<SyncFile> syncFiles = new List<SyncFile>();
-            List<string> topDirectories = new List<string>();
             foreach (var dir in dirs)
             {
                 //为了加快速度，用了一些技巧
@@ -45,12 +44,10 @@ namespace OffsiteBackupOfflineSync.Utility
                 }
                 syncFiles.AddRange(tempFiles); //加入临时的数组
                 var dirInfo = new DirectoryInfo(dir);
-                topDirectories.Add(dirInfo.FullName);
             }
             Step1Model model = new Step1Model()
             {
                 Files = syncFiles.ToList(),
-                TopDirectories = topDirectories,
             };
             var json = JsonConvert.SerializeObject(model, Formatting.Indented);
             File.WriteAllText(jsonPath, json);

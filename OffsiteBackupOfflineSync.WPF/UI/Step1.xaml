@@ -162,7 +162,7 @@
                 Grid.Column="6"
                 Width="128"
                 Click="ExportButton_Click"
-                Content="导出"
+                Content="导出快照"
                 IsEnabled="{Binding CanAnalyze}" />
         </Grid>
     </Grid>

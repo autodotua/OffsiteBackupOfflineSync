@@ -134,7 +134,10 @@ namespace OffsiteBackupOfflineSync.UI
                     string[] localSearchingDirs = ViewModel.LocalDir.Split(new char[] { '|', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                     step1 = Step1Utility.ReadStep1Model(ViewModel.OffsiteSnapshot);
                     ViewModel.MatchingDirs = new ObservableCollection<LocalAndOffsiteDir>(
-                        step1.TopDirectories.Select(p => new LocalAndOffsiteDir() { OffsiteDir = p }));
+                        step1.Files
+                        .Select(p=>p.TopDirectory)
+                        .Distinct()
+                        .Select(p => new LocalAndOffsiteDir() { OffsiteDir = p, }));
                     var matchingDirsDic = ViewModel.MatchingDirs.ToDictionary(p => Path.GetFileName(p.OffsiteDir), p => p);
                     foreach (var localSearchingDir in localSearchingDirs)
                     {
@@ -163,7 +166,16 @@ namespace OffsiteBackupOfflineSync.UI
 
         private async void SearchChangeButton_Click(object sender, RoutedEventArgs e)
         {
-
+            if (step1 == null)
+            {
+                await CommonDialog.ShowErrorDialogAsync("请先匹配目录");
+                return;
+            }
+            if (ViewModel.MatchingDirs is null or { Count: 0 })
+            {
+                await CommonDialog.ShowErrorDialogAsync("没有匹配的目录");
+                return;
+            }
             bool needProcess = false;
             try
             {
@@ -263,7 +275,11 @@ namespace OffsiteBackupOfflineSync.UI
         public string OffsiteSnapshot
         {
             get => offsiteSnapshot;
-            set => this.SetValueAndNotify(ref offsiteSnapshot, value, nameof(OffsiteSnapshot));
+            set
+            {
+                this.SetValueAndNotify(ref offsiteSnapshot, value, nameof(OffsiteSnapshot));
+                MatchingDirs = null;
+            }
         }
 
         public string PatchDir
@@ -271,5 +287,6 @@ namespace OffsiteBackupOfflineSync.UI
             get => patchDir;
             set => this.SetValueAndNotify(ref patchDir, value, nameof(PatchDir));
         }
+
     }
 }

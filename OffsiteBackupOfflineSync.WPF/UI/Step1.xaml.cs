@@ -45,8 +45,7 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void BrowseOutputFileButton_Click(object sender, RoutedEventArgs e)
         {
-            string name = $"{DateTime.Now:yyyyMMdd}-";
-            name += GetVolumeName(name);
+            string name = $"{DateTime.Now:yyyyMMdd}-备份";
             string path = new FileFilterCollection().Add("异地备份快照", "obos1")
                .CreateSaveFileDialog()
                .SetDefault(name)
@@ -78,8 +77,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             if (string.IsNullOrWhiteSpace(ViewModel.OutputFile))
             {
-                string name = $"{DateTime.Now:yyyyMMdd}-";
-                name += GetVolumeName(name);
+                string name = $"{DateTime.Now:yyyyMMdd}-备份";
                 string path = new FileFilterCollection().Add("异地备份快照", "obos1")
                    .CreateSaveFileDialog()
                    .SetDefault(name)
@@ -118,19 +116,6 @@ namespace OffsiteBackupOfflineSync.UI
 
         }
 
-        private string GetVolumeName(string path)
-        {
-            DriveInfo[] drives = DriveInfo.GetDrives();
-            if (drives.Any(p => ViewModel.SearchingDir.StartsWith(p.Name)))
-            {
-                var label = drives.First(p => ViewModel.SearchingDir.StartsWith(p.Name)).VolumeLabel;
-                if (!string.IsNullOrEmpty(label))
-                {
-                    return label;
-                }
-            }
-            return path[0].ToString();
-        }
 
         private void RemoveAllSyncDirsButton_Click(object sender, RoutedEventArgs e)
         {
