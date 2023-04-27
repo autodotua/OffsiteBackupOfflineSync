@@ -229,6 +229,10 @@ namespace OffsiteBackupOfflineSync.UI
                         .Where(p => !SyncDirs.Contains(p))
                         .ToList();
                 }
+                else if(string.IsNullOrEmpty(value))
+                {
+                    SearchingDirs= DriveInfo.GetDrives().Select(p=>p.RootDirectory.FullName).ToList();
+                }
                 else
                 {
                     SearchingDirs = new List<string>();

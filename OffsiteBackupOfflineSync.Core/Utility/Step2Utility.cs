@@ -15,7 +15,6 @@ namespace OffsiteBackupOfflineSync.Utility
     {
         public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
         public List<string> LocalDirectories { get; } = new List<string>();
-        private string localDir;
         private volatile int index = 0;
 
 
@@ -27,49 +26,75 @@ namespace OffsiteBackupOfflineSync.Utility
         /// <param name="blackList">黑名单</param>
         /// <param name="blackListUseRegex">黑名单是否启用正则</param>
         /// <param name="maxTimeTolerance">对比时修改时间容差</param>
-        public void Search(string localDir, string offsiteSnapshotFile, string blackList, bool blackListUseRegex, double maxTimeTolerance, bool checkMoveIgnoreFileName)
+        public void Search(IEnumerable<LocalAndOffsiteDir> localAndOffsiteDirs, Step1Model offsite, string blackList, bool blackListUseRegex, double maxTimeTolerance, bool checkMoveIgnoreFileName)
         {
             stopping = false;
-            this.localDir = localDir;
             UpdateFiles.Clear();
             LocalDirectories.Clear();
             index = 0;
-            InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
-            ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>(); //临时的多线程需要更新文件列表
-            Step1Model offsite = JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(offsiteSnapshotFile));
-            Dictionary<string, SyncFile> offsitePath2File = offsite.Files.ToDictionary(p => p.Path); //从路径寻找本地文件的字典
-            Dictionary<string, List<SyncFile>> offsiteName2File = offsite.Files.GroupBy(p => p.Name).ToDictionary(p => p.Key, p => p.ToList());
-            Dictionary<DateTime, List<SyncFile>> offsiteTime2File = offsite.Files.GroupBy(p => p.LastWriteTime).ToDictionary(p => p.Key, p => p.ToList());
-            Dictionary<long, List<SyncFile>> offsiteLength2File = offsite.Files.GroupBy(p => p.Length).ToDictionary(p => p.Key, p => p.ToList());
-            ConcurrentDictionary<string, byte> localFiles = new ConcurrentDictionary<string, byte>(); //用于之后寻找差异文件的哈希表
 
+            InvokeMessageReceivedEvent($"正在初始化");
+            InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
+            //临时的多线程需要更新文件列表
+            ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>();
+            //将异地文件根据顶级目录
+            var offsiteTopDir2Files = offsite.Files.GroupBy(p => p.TopDirectory).ToDictionary(p => p.Key, p => p.ToList());
+            //用于之后寻找差异文件的哈希表
+            ConcurrentDictionary<string, byte> localFiles = new ConcurrentDictionary<string, byte>();
+            HashSet<string> offsiteTopDirs = localAndOffsiteDirs.Select(p => p.OffsiteDir).ToHashSet();
+            if (offsiteTopDirs.Count != localAndOffsiteDirs.Count())
+            {
+                throw new ArgumentException("异地顶级目录存在重复", nameof(localAndOffsiteDirs));
+            }
+            foreach (var file in offsiteTopDir2Files)
+            {
+                if (!offsiteTopDirs.Contains(file.Key))
+                {
+                    throw new ArgumentException($"快照中存在顶级目录{file.Key}但{nameof(localAndOffsiteDirs)}未提供", nameof(localAndOffsiteDirs));
+                }
+            }
 
             //枚举本地文件，寻找离线快照中是否存在相同文件
-            foreach (var dir in new DirectoryInfo(localDir).EnumerateDirectories())
+            foreach (var localAndOffsiteDir in localAndOffsiteDirs)
             {
-                if (!offsite.TopDirectories.Contains(dir.Name))
-                {
-                    continue;
-                }
-
+                var dir = new DirectoryInfo(localAndOffsiteDir.LocalDir);
                 InvokeMessageReceivedEvent($"正在查找：{dir}");
                 var localFileList = dir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
-                Parallel.ForEach(localFileList, (file, state) =>
+
+#if DEBUG
+                foreach (var file in localFileList)
                 {
+#else
+                    Parallel.ForEach(localFileList, (file, state) =>
+                {
+#endif
+
 #if DEBUG
                     TestUtility.SleepInDebug();
+                    Debug.WriteLine(file);
 #endif
                     if (stopping)
                     {
+#if DEBUG
+                        break;
+#else
                         state.Stop();
+#endif
                     }
-                    string relativePath = Path.GetRelativePath(localDir, file.FullName);
+                    string relativePath = Path.GetRelativePath(dir.Parent.FullName, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
                     localFiles.TryAdd(relativePath, 0);
                     if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
                     {
                         return;
                     }
+                    //从路径、文件名、时间、长度寻找本地文件的字典
+                    string offsiteTopDirectory = localAndOffsiteDir.OffsiteDir;
+                    Dictionary<string, SyncFile> offsitePath2File = offsiteTopDir2Files[offsiteTopDirectory].ToDictionary(p => p.Path);
+                    Dictionary<string, List<SyncFile>> offsiteName2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Name).ToDictionary(p => p.Key, p => p.ToList());
+                    Dictionary<DateTime, List<SyncFile>> offsiteTime2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.LastWriteTime).ToDictionary(p => p.Key, p => p.ToList());
+                    Dictionary<long, List<SyncFile>> offsiteLength2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Length).ToDictionary(p => p.Key, p => p.ToList());
+
                     if (offsitePath2File.ContainsKey(relativePath))//路径相同，说明是没有变化或者文件被修改
                     {
                         var offsiteFile = offsitePath2File[relativePath];
@@ -86,7 +111,8 @@ namespace OffsiteBackupOfflineSync.Utility
                             Name = file.Name,
                             Length = file.Length,
                             LastWriteTime = file.LastWriteTime,
-                            UpdateType = FileUpdateType.Modify
+                            UpdateType = FileUpdateType.Modify,
+                            TopDirectory = offsiteTopDirectory,
                         };
                         if ((offsiteFile.LastWriteTime - file.LastWriteTime).TotalSeconds > maxTimeTolerance)
                         {
@@ -113,6 +139,7 @@ namespace OffsiteBackupOfflineSync.Utility
                                 Length = file.Length,
                                 LastWriteTime = file.LastWriteTime,
                                 UpdateType = FileUpdateType.Move,
+                                TopDirectory = offsiteTopDirectory,
                             };
                             tempUpdateFiles.Add(movedFile);
                             localFiles.TryAdd(offsiteMovedFile.Path, 0);//如果被移动了，那么不需要进行删除判断，所以要把异地的文件地址也加入进去。
@@ -125,12 +152,17 @@ namespace OffsiteBackupOfflineSync.Utility
                                 Name = file.Name,
                                 Length = file.Length,
                                 LastWriteTime = file.LastWriteTime,
-                                UpdateType = FileUpdateType.Add
+                                UpdateType = FileUpdateType.Add,
+                                TopDirectory = offsiteTopDirectory,
                             };
                             tempUpdateFiles.Add(newFile);
                         }
                     }
-                });
+#if DEBUG
+                }
+#else
+            });
+#endif
 
                 if (stopping)
                 {
@@ -139,7 +171,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 LocalDirectories.Add(dir.Name);
                 foreach (var subDir in dir.EnumerateDirectories("*", SearchOption.AllDirectories))
                 {
-                    string relativePath = Path.GetRelativePath(localDir, subDir.FullName);
+                    string relativePath = Path.GetRelativePath(dir.Parent.FullName, subDir.FullName);
                     LocalDirectories.Add(relativePath);
                 }
             }
@@ -187,7 +219,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 {
                     file.TempName = GetTempFileName(file, sha256);
                     InvokeMessageReceivedEvent($"正在复制：{file.Path}");
-                    string sourceFile = Path.Combine(localDir, file.Path);
+                    string sourceFile = Path.Combine("localDir", file.Path); throw new NotImplementedException();
                     string destFile = Path.Combine(outputDir, file.TempName);
                     if (File.Exists(destFile))
                     {

@@ -50,6 +50,7 @@
                         Text="异地快照文件：" />
                     <TextBox
                         Grid.Column="2"
+                        MaxLines="3"
                         Text="{Binding OffsiteSnapshot}"
                         TextWrapping="Wrap" />
                     <Button
@@ -64,9 +65,10 @@
                     <TextBox
                         Grid.Row="2"
                         Grid.Column="2"
-                        ui:ControlHelper.PlaceholderText="在选择的目录中搜索需要同步的目录。使用“|”分割多个目录。"
-                        Text="{Binding LocalDir}"
-                        TextWrapping="Wrap" />
+                        ui:ControlHelper.PlaceholderText="在选择的目录中搜索需要同步的目录；一行一项"
+                        AcceptsReturn="True"
+                        MaxLines="3"
+                        Text="{Binding LocalDir}" />
                     <Button
                         Grid.Row="2"
                         Grid.Column="4"
@@ -78,7 +80,7 @@
                     <Button
                         Padding="32,4"
                         Click="MatchDirsButton_Click"
-                        Content="匹配目录" />
+                        Content="1. 匹配目录" />
                 </Grid>
             </ui:SimpleStackPanel>
             <DataGrid
@@ -161,7 +163,7 @@
                     <Button
                         Padding="32,4"
                         Click="SearchChangeButton_Click"
-                        Content="查找更改" />
+                        Content="2. 查找更改" />
                 </Grid>
             </ui:SimpleStackPanel>
             <DataGrid
@@ -360,7 +362,7 @@
                 Grid.Column="8"
                 Width="128"
                 Click="ExportButton_Click"
-                Content="生成补丁"
+                Content="3. 生成补丁"
                 IsEnabled="{Binding CanProcess}" />
         </Grid>
     </Grid>

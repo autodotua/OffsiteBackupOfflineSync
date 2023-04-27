@@ -1,11 +1,11 @@
 ﻿using FzLib;
 using Microsoft.WindowsAPICodePack.FzExtension;
 using ModernWpf.FzExtension.CommonDialog;
+using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
 using OffsiteBackupOfflineSync.WPF.UI;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -13,6 +13,7 @@ using System.Windows.Controls;
 
 namespace OffsiteBackupOfflineSync.UI
 {
+
     /// <summary>
     /// RebuildPanel.xaml 的交互逻辑
     /// </summary>
@@ -37,14 +38,14 @@ namespace OffsiteBackupOfflineSync.UI
             dialog.IsFolderPicker = true;
             if (dialog.ShowDialog() == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok)
             {
-                string path = string.Join('|', dialog.FileNames);
+                string path = string.Join(Environment.NewLine, dialog.FileNames);
                 if (string.IsNullOrEmpty(ViewModel.LocalDir))
                 {
                     ViewModel.LocalDir = path;
                 }
                 else
                 {
-                    ViewModel.LocalDir += "|" + path;
+                    ViewModel.LocalDir += Environment.NewLine + path;
                 }
             }
         }
@@ -105,6 +106,60 @@ namespace OffsiteBackupOfflineSync.UI
             }
 
         }
+        Step1Model step1;
+        private async void MatchDirsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(ViewModel.OffsiteSnapshot))
+            {
+                await CommonDialog.ShowErrorDialogAsync("未设置快照文件");
+                return;
+            }
+            if (!File.Exists(ViewModel.OffsiteSnapshot))
+            {
+                await CommonDialog.ShowErrorDialogAsync("快照文件不存在");
+                return;
+            }
+            if (string.IsNullOrEmpty(ViewModel.LocalDir))
+            {
+                await CommonDialog.ShowErrorDialogAsync("未设置本地目录");
+                return;
+            }
+
+            try
+            {
+                ViewModel.UpdateStatus(StatusType.Analyzing);
+                await Task.Run(() =>
+                {
+
+                    string[] localSearchingDirs = ViewModel.LocalDir.Split(new char[] { '|', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    step1 = Step1Utility.ReadStep1Model(ViewModel.OffsiteSnapshot);
+                    ViewModel.MatchingDirs = new ObservableCollection<LocalAndOffsiteDir>(
+                        step1.TopDirectories.Select(p => new LocalAndOffsiteDir() { OffsiteDir = p }));
+                    var matchingDirsDic = ViewModel.MatchingDirs.ToDictionary(p => Path.GetFileName(p.OffsiteDir), p => p);
+                    foreach (var localSearchingDir in localSearchingDirs)
+                    {
+                        foreach (var subLocalDir in new DirectoryInfo(localSearchingDir).EnumerateDirectories())
+                        {
+                            if (matchingDirsDic.ContainsKey(subLocalDir.Name))
+                            {
+                                matchingDirsDic[subLocalDir.Name].LocalDir = subLocalDir.FullName;
+                            }
+                        }
+                    }
+                });
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                await CommonDialog.ShowErrorDialogAsync(ex, "匹配失败");
+            }
+            finally
+            {
+                ViewModel.UpdateStatus(StatusType.Ready);
+            }
+        }
 
         private async void SearchChangeButton_Click(object sender, RoutedEventArgs e)
         {
@@ -115,7 +170,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
-                    u.Search(ViewModel.LocalDir, ViewModel.OffsiteSnapshot, ViewModel.BlackList,
+                    u.Search(ViewModel.MatchingDirs, step1, ViewModel.BlackList,
                         ViewModel.BlackListUseRegex, Configs.MaxTimeTolerance,
                         ViewModel.MoveFileIgnoreName);
                     ViewModel.Files = new ObservableCollection<SyncFile>(u.UpdateFiles);
@@ -156,101 +211,18 @@ namespace OffsiteBackupOfflineSync.UI
             ViewModel.UpdateStatus(StatusType.Stopping);
             u.Stop();
         }
-
-        private async void MatchDirsButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (string.IsNullOrEmpty(ViewModel.OffsiteSnapshot))
-            {
-                await CommonDialog.ShowErrorDialogAsync("未设置快照文件");
-                return;
-            }
-            if (!File.Exists(ViewModel.OffsiteSnapshot))
-            {
-                await CommonDialog.ShowErrorDialogAsync("快照文件不存在");
-                return;
-            }
-            if (string.IsNullOrEmpty(ViewModel.LocalDir))
-            {
-                await CommonDialog.ShowErrorDialogAsync("未设置本地目录");
-                return;
-            }
-
-            try
-            {
-                ViewModel.UpdateStatus(StatusType.Analyzing);
-                await Task.Run(() =>
-                {
-
-                    string[] localSearchingDirs = ViewModel.LocalDir.Split('|');
-                    Step1Model step1 = Step1Utility.ReadStep1Model(ViewModel.OffsiteSnapshot);
-                    ViewModel.MatchingDirs = new ObservableCollection<LocalAndOffsiteDir>(
-                        step1.TopDirectories.Select(p => new LocalAndOffsiteDir() { OffsiteDir = p }));
-
-                    foreach (var localSearchingDir in localSearchingDirs)
-                    {
-                        foreach (var subLocalDir in new DirectoryInfo(localSearchingDir).EnumerateDirectories())
-                        {
-                            var localAndOffsiteDir = ViewModel.MatchingDirs
-                            .Where(p => p.LocalDir == null)
-                            .FirstOrDefault(p => Path.GetFileName(p.OffsiteDir) == subLocalDir.Name);
-                            if (localAndOffsiteDir != null)
-                            {
-                                localAndOffsiteDir.LocalDir = subLocalDir.FullName;
-                            }
-                        }
-                    }
-                });
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception ex)
-            {
-                await CommonDialog.ShowErrorDialogAsync(ex, "匹配失败");
-            }
-            finally
-            {
-                ViewModel.UpdateStatus(StatusType.Ready);
-            }
-        }
     }
-
-    public class LocalAndOffsiteDir : INotifyPropertyChanged
-    {
-        private string localDir;
-        public string LocalDir
-        {
-            get => localDir;
-            set => this.SetValueAndNotify(ref localDir, value, nameof(LocalDir));
-        }
-        private string offsiteDir;
-        public string OffsiteDir
-        {
-            get => offsiteDir;
-            set => this.SetValueAndNotify(ref offsiteDir, value, nameof(OffsiteDir));
-        }
-
-
-        public event PropertyChangedEventHandler PropertyChanged;
-    }
-
     public class Step2ViewModel : ViewModelBase<SyncFile>
     {
         private string blackList = "Thumbs.db";
         private bool blackListUseRegex;
         private bool hardLink;
         private string localDir;
+        private ObservableCollection<LocalAndOffsiteDir> matchingDirs;
         private bool moveFileIgnoreName = true;
         private string offsiteSnapshot;
 
         private string patchDir;
-        private ObservableCollection<LocalAndOffsiteDir> matchingDirs;
-        public ObservableCollection<LocalAndOffsiteDir> MatchingDirs
-        {
-            get => matchingDirs;
-            set => this.SetValueAndNotify(ref matchingDirs, value, nameof(MatchingDirs));
-        }
-
         public string BlackList
         {
             get => blackList;
@@ -268,10 +240,18 @@ namespace OffsiteBackupOfflineSync.UI
             get => hardLink;
             set => this.SetValueAndNotify(ref hardLink, value, nameof(HardLink));
         }
+
         public string LocalDir
         {
             get => localDir;
             set => this.SetValueAndNotify(ref localDir, value, nameof(LocalDir));
+        }
+
+        [JsonIgnore]
+        public ObservableCollection<LocalAndOffsiteDir> MatchingDirs
+        {
+            get => matchingDirs;
+            set => this.SetValueAndNotify(ref matchingDirs, value, nameof(MatchingDirs));
         }
 
         public bool MoveFileIgnoreName
