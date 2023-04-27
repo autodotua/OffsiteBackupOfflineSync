@@ -14,7 +14,7 @@ namespace OffsiteBackupOfflineSync.Utility
     public class Step2Utility : UtilityBase
     {
         public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
-        public Dictionary<string,List<string>> LocalDirectories { get; } = new Dictionary<string, List<string>>();
+        public Dictionary<string, List<string>> LocalDirectories { get; } = new Dictionary<string, List<string>>();
         private volatile int index = 0;
         private IEnumerable<LocalAndOffsiteDir> localAndOffsiteDirs;
 
@@ -62,11 +62,19 @@ namespace OffsiteBackupOfflineSync.Utility
                 InvokeMessageReceivedEvent($"正在查找：{localDir}");
                 var localFileList = localDir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
 
+                //从路径、文件名、时间、长度寻找本地文件的字典
+                string offsiteTopDirectory = localAndOffsiteDir.OffsiteDir;
+                Dictionary<string, SyncFile> offsitePath2File = offsiteTopDir2Files[offsiteTopDirectory].ToDictionary(p => p.Path);
+                Dictionary<string, List<SyncFile>> offsiteName2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Name).ToDictionary(p => p.Key, p => p.ToList());
+                Dictionary<DateTime, List<SyncFile>> offsiteTime2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.LastWriteTime).ToDictionary(p => p.Key, p => p.ToList());
+                Dictionary<long, List<SyncFile>> offsiteLength2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Length).ToDictionary(p => p.Key, p => p.ToList());
+
+
 #if DEBUG
                 foreach (var file in localFileList)
                 {
 #else
-                    Parallel.ForEach(localFileList, (file, state) =>
+                Parallel.ForEach(localFileList, (file, state) =>
                 {
 #endif
 
@@ -87,14 +95,12 @@ namespace OffsiteBackupOfflineSync.Utility
                     localFiles.TryAdd(relativePath, 0);
                     if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
                     {
+#if DEBUG
+                        break;
+#else
                         return;
+#endif
                     }
-                    //从路径、文件名、时间、长度寻找本地文件的字典
-                    string offsiteTopDirectory = localAndOffsiteDir.OffsiteDir;
-                    Dictionary<string, SyncFile> offsitePath2File = offsiteTopDir2Files[offsiteTopDirectory].ToDictionary(p => p.Path);
-                    Dictionary<string, List<SyncFile>> offsiteName2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Name).ToDictionary(p => p.Key, p => p.ToList());
-                    Dictionary<DateTime, List<SyncFile>> offsiteTime2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.LastWriteTime).ToDictionary(p => p.Key, p => p.ToList());
-                    Dictionary<long, List<SyncFile>> offsiteLength2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Length).ToDictionary(p => p.Key, p => p.ToList());
 
                     if (offsitePath2File.ContainsKey(relativePath))//路径相同，说明是没有变化或者文件被修改
                     {
@@ -102,7 +108,11 @@ namespace OffsiteBackupOfflineSync.Utility
                         if ((offsiteFile.LastWriteTime - file.LastWriteTime).Duration().TotalSeconds < maxTimeTolerance
                         && offsiteFile.Length == file.Length)//文件没有发生改动
                         {
-                            return;
+#if DEBUG
+                            break;
+#else
+                        return;
+#endif
                         }
 
                         //文件发生改变
@@ -305,7 +315,7 @@ namespace OffsiteBackupOfflineSync.Utility
 
         private string GetTempFileName(SyncFile file, SHA256 sha256)
         {
-            string featureCode = $"{file.Path}{file.LastWriteTime}{file.Length}";
+            string featureCode = $"{file.TopDirectory}{file.Path}{file.LastWriteTime}{file.Length}";
 
             var bytes = Encoding.UTF8.GetBytes(featureCode);
             var code = sha256.ComputeHash(bytes);

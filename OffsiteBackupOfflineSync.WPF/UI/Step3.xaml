@@ -33,8 +33,6 @@
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="8" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock
                     VerticalAlignment="Center"
@@ -47,19 +45,6 @@
                     Click="BrowsePatchDirButton_Click"
                     Content="浏览" />
 
-                <TextBlock
-                    Grid.Row="2"
-                    VerticalAlignment="Center"
-                    Text="待更新异地目录：" />
-                <TextBox
-                    Grid.Row="2"
-                    Grid.Column="2"
-                    Text="{Binding OffsiteDir}" />
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="4"
-                    Click="BrowseOffsiteDirButton_Click"
-                    Content="浏览" />
             </Grid>
             <Grid HorizontalAlignment="Right">
                 <Button
