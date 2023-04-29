@@ -17,30 +17,19 @@ namespace OffsiteBackupOfflineSync.UI
     /// </summary>
     public partial class Step3 : UserControl
     {
-        private readonly Step3Utility u = new Step3Utility();
+        private Step3Utility u = null;
 
         public Step3(Step3ViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
-            PanelHelper.RegisterMessageAndProgressEvent(u, viewModel);
         }
 
         public Step3ViewModel ViewModel { get; }
 
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(ViewModel.OffsiteDir))
-            {
-                await CommonDialog.ShowErrorDialogAsync("未设置异地目录");
-                return;
-            }
-            if (!Directory.Exists(ViewModel.OffsiteDir))
-            {
-                await CommonDialog.ShowErrorDialogAsync("异地目录不存在");
-                return;
-            }
             if (string.IsNullOrEmpty(ViewModel.PatchDir))
             {
                 await CommonDialog.ShowErrorDialogAsync("未设置补丁目录");
@@ -53,10 +42,12 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
+                u = new Step3Utility();
+                PanelHelper.RegisterMessageAndProgressEvent(u, ViewModel);
                 ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
-                    u.Analyze(ViewModel.PatchDir, ViewModel.OffsiteDir);
+                    u.Analyze(ViewModel.PatchDir);
                     ViewModel.Files = new ObservableCollection<SyncFile>(u.UpdateFiles); ;
                 });
                 ViewModel.UpdateStatus(ViewModel.Files.Count > 0 ? StatusType.Analyzed : StatusType.Ready);
@@ -69,15 +60,6 @@ namespace OffsiteBackupOfflineSync.UI
             {
                 await CommonDialog.ShowErrorDialogAsync(ex, "分析失败");
                 ViewModel.UpdateStatus(StatusType.Ready);
-            }
-        }
-
-        private void BrowseOffsiteDirButton_Click(object sender, RoutedEventArgs e)
-        {
-            string path = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
-            if (path != null)
-            {
-                ViewModel.OffsiteDir = path;
             }
         }
 
@@ -111,21 +93,19 @@ namespace OffsiteBackupOfflineSync.UI
             try
             {
                 ViewModel.UpdateStatus(StatusType.Processing);
-                string deletedDir = Path.Combine(ViewModel.OffsiteDir, ViewModel.DeletedDir,
-                      DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
                 await Task.Run(() =>
                 {
-                    u.Update(ViewModel.OffsiteDir, deletedDir, ViewModel.DeleteMode);
-                    u.AnalyzeEmptyDirectories(ViewModel.OffsiteDir, ViewModel.DeleteMode);
+                    u.Update(ViewModel.DeleteMode);
+                    u.AnalyzeEmptyDirectories();
                 });
 
                 if (u.DeletingDirectories.Any())
                 {
                     if (await CommonDialog.ShowYesNoDialogAsync("删除空目录",
                         $"有{u.DeletingDirectories.Count}个已不存在于本地的空目录，是否删除？",
-                        string.Join(Environment.NewLine, u.DeletingDirectories)))
+                        string.Join(Environment.NewLine, u.DeletingDirectories.Select(p => Path.Combine(p.TopDirectory, p.Path)))))
                     {
-                        u.DeleteEmptyDirectories(ViewModel.OffsiteDir, deletedDir, ViewModel.DeleteMode);
+                        u.DeleteEmptyDirectories(ViewModel.DeleteMode);
                     }
                 }
             }
@@ -146,7 +126,6 @@ namespace OffsiteBackupOfflineSync.UI
     public class Step3ViewModel : ViewModelBase<SyncFile>
     {
         private DeleteMode deleteMode = DeleteMode.MoveToDeletedFolder;
-        private string offsiteDir;
         private string patchDir;
         public string DeletedDir { get; set; } = "被删除和替换的文件备份";
 
@@ -158,11 +137,7 @@ namespace OffsiteBackupOfflineSync.UI
 
         public IEnumerable DeleteModes => Enum.GetValues<DeleteMode>();
 
-        public string OffsiteDir
-        {
-            get => offsiteDir;
-            set => this.SetValueAndNotify(ref offsiteDir, value, nameof(OffsiteDir));
-        }
+
 
         public string PatchDir
         {

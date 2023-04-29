@@ -33,8 +33,6 @@
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="8" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock
                     VerticalAlignment="Center"
@@ -45,27 +43,14 @@
                 <Button
                     Grid.Column="4"
                     Click="BrowsePatchDirButton_Click"
-                    Content="浏览" />
+                    Content="浏览.." />
 
-                <TextBlock
-                    Grid.Row="2"
-                    VerticalAlignment="Center"
-                    Text="待更新异地目录：" />
-                <TextBox
-                    Grid.Row="2"
-                    Grid.Column="2"
-                    Text="{Binding OffsiteDir}" />
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="4"
-                    Click="BrowseOffsiteDirButton_Click"
-                    Content="浏览" />
             </Grid>
             <Grid HorizontalAlignment="Right">
                 <Button
-                    Padding="32,4"
+                    Width="128"
                     Click="AnalyzeButton_Click"
-                    Content="分析" />
+                    Content="1. 分析" />
             </Grid>
         </ui:SimpleStackPanel>
         <Grid Grid.Row="2">
@@ -126,9 +111,10 @@
                         ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="文件名"
                         IsReadOnly="True" />
+
                     <DataGridTextColumn
                         Width="400"
-                        Binding="{Binding Path}"
+                        Binding="{Binding ., Converter={StaticResource SyncFilePathConverter}}"
                         ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="路径"
                         IsReadOnly="True" />
@@ -197,7 +183,7 @@
                 Orientation="Horizontal"
                 Spacing="8">
                 <TextBlock VerticalAlignment="Center">
-                      <Run Text="共新增文件" />
+                    <Run Text="共新增文件" />
                     <Run Text="{Binding AddedFileCount, Mode=OneWay}" />
                     <Run Text="个（" />
                     <Run Text="{Binding AddedFileLength, Mode=OneWay, Converter={StaticResource FileLength2StringConverter}}" />
@@ -211,20 +197,17 @@
                     <Run Text="{Binding DeletedFileCount, Mode=OneWay}" />
                     <Run Text="个" />
                 </TextBlock>
-
                 <Button
                     HorizontalAlignment="Stretch"
                     Click="SelectAllButton_Click"
-                    IsEnabled="{Binding CanEditConfigs}">
-                    <ui:SymbolIcon Symbol="SelectAll" />
-                </Button>
+                    Content="全选"
+                    IsEnabled="{Binding CanEditConfigs}" />
                 <Button
                     Grid.Column="2"
                     HorizontalAlignment="Stretch"
                     Click="SelectNoneButton_Click"
-                    IsEnabled="{Binding CanEditConfigs}">
-                    <ui:SymbolIcon Symbol="ClearSelection" />
-                </Button>
+                    Content="全不选"
+                    IsEnabled="{Binding CanEditConfigs}" />
             </ui:SimpleStackPanel>
         </Grid>
         <Grid
@@ -281,7 +264,7 @@
                 Grid.Column="10"
                 Width="128"
                 Click="UpdateButton_Click"
-                Content="更新"
+                Content="2. 更新"
                 IsEnabled="{Binding CanProcess}" />
         </Grid>
     </Grid>

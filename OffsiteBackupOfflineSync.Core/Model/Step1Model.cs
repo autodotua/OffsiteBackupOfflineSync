@@ -9,6 +9,5 @@ namespace OffsiteBackupOfflineSync.Model
     public class Step1Model
     {
         public List<SyncFile> Files { get; set; }   
-        public List<string> TopDirectories { get; set; }
     }
 }

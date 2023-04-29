@@ -19,8 +19,13 @@
             <TextBlock Text="autodotua" />
             <ui:HyperlinkButton NavigateUri="https://github.com/autodotua/OffsiteBackupOfflineSync">Github</ui:HyperlinkButton>
             <Button
+                Width="128"
+                Click="GenerateTestFilesButton_Click"
+                Content="生成测试文件" />
+            <Button
+                Width="128"
                 Click="TestButton_Click"
-                Content="生成测试目录" />
+                Content="自动化测试" />
         </ui:SimpleStackPanel>
     </Grid>
 </Page>

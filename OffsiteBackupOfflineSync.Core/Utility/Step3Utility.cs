@@ -1,5 +1,4 @@
 ﻿using FzLib.IO;
-using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -8,16 +7,79 @@ namespace OffsiteBackupOfflineSync.Utility
 {
     public class Step3Utility : UtilityBase
     {
-        public List<SyncFile> UpdateFiles { get; private set; }
-        public List<string> LocalDirectories { get; private set; }
-        public List<string> DeletingDirectories { get; private set; }
+        public const string DeleteDirName = "异地备份离线同步-删除的文件";
+        private readonly DateTime createTime = DateTime.Now;
         private string patchDir;
-        public void Analyze(string patchDir, string offsiteDir)
+        public List<SyncFile> DeletingDirectories { get; private set; }
+        public Dictionary<string, List<string>> LocalDirectories { get; private set; }
+        public List<SyncFile> UpdateFiles { get; private set; }
+        public static string GetNoDuplicateDirectory(string path, string suffixFormat = " ({i})")
+        {
+            if (!Directory.Exists(path))
+            {
+                return path;
+            }
+
+            if (!suffixFormat.Contains("{i}"))
+            {
+                throw new ArgumentException("后缀应包含“{i}”以表示索引");
+            }
+
+            int num = 2;
+            string directoryName = Path.GetDirectoryName(path);
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
+            string extension = Path.GetExtension(path);
+            string text;
+            while (true)
+            {
+                text = Path.Combine(directoryName, fileNameWithoutExtension + suffixFormat.Replace("{i}", num.ToString()) + extension);
+                if (!Directory.Exists(text))
+                {
+                    break;
+                }
+
+                num++;
+            }
+
+            return text;
+        }
+
+        public static string GetNoDuplicateFile(string path, string suffixFormat = " ({i})")
+        {
+            if (!File.Exists(path))
+            {
+                return path;
+            }
+
+            if (!suffixFormat.Contains("{i}"))
+            {
+                throw new ArgumentException("后缀应包含“{i}”以表示索引");
+            }
+
+            int num = 2;
+            string directoryName = Path.GetDirectoryName(path);
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
+            string extension = Path.GetExtension(path);
+            string text;
+            while (true)
+            {
+                text = Path.Combine(directoryName, fileNameWithoutExtension + suffixFormat.Replace("{i}", num.ToString()) + extension);
+                if (!File.Exists(text))
+                {
+                    break;
+                }
+
+                num++;
+            }
+
+            return text;
+        }
+
+        public void Analyze(string patchDir)
         {
             stopping = false;
             this.patchDir = patchDir;
-            var json = File.ReadAllText(Path.Combine(patchDir, "file.obos2"));
-            var step2 = JsonConvert.DeserializeObject<Step2Model>(json);
+            var step2 = ReadFromZip<Step2Model>(Path.Combine(patchDir, "file.obos2"));
 
             UpdateFiles = step2.Files;
             LocalDirectories = step2.LocalDirectories;
@@ -34,8 +96,8 @@ namespace OffsiteBackupOfflineSync.Utility
                 TestUtility.SleepInDebug();
 #endif
                 string patch = file.TempName == null ? null : Path.Combine(patchDir, file.TempName);
-                string target = Path.Combine(offsiteDir, file.Path);
-                string oldPath = file.OldPath == null ? null : Path.Combine(offsiteDir, file.OldPath);
+                string target = Path.Combine(file.TopDirectory, file.Path);
+                string oldPath = file.OldPath == null ? null : Path.Combine(file.TopDirectory, file.OldPath);
                 if (file.UpdateType is not (FileUpdateType.Delete or FileUpdateType.Move) && !File.Exists(patch))
                 {
                     file.Message = "补丁文件不存在";
@@ -86,7 +148,66 @@ namespace OffsiteBackupOfflineSync.Utility
 
         }
 
-        public void Update(string offsiteDir, string deletedDir, DeleteMode deleteMode)
+        public void AnalyzeEmptyDirectories()
+        {
+            InvokeMessageReceivedEvent($"正在查找空目录");
+            DeletingDirectories = new List<SyncFile>();
+            //清理空目录
+            //HashSet<string> shouldKeepDirs = LocalDirectories
+            //    .Select(p => p.Value.Select(q => Path.Combine(p.Key, q)))
+            //    .SelectMany(p => p)
+            //    .ToHashSet();
+
+            foreach (var topDir in LocalDirectories.Keys)
+            {
+                HashSet<string> deletingDirsInThisTopDir = new HashSet<string>();
+                foreach (var offsiteSubDir in Directory.EnumerateDirectories(topDir, "*", SearchOption.AllDirectories).ToList())
+                {
+                    if (stopping)
+                    {
+                        throw new OperationCanceledException();
+                    }
+                    if (!LocalDirectories[topDir].Contains(Path.GetRelativePath(topDir, offsiteSubDir)))//本地已经没有远程的这个目录了
+                    {
+                        if (!Directory.EnumerateFiles(offsiteSubDir).Any())//并且远程的这个目录是空的
+                        {
+                            deletingDirsInThisTopDir.Add(offsiteSubDir);
+                        }
+                    }
+                }
+
+
+
+                //通过两层循环，删除位于空目录下的空目录
+                foreach (var dir1 in deletingDirsInThisTopDir.ToList())//外层循环，dir1为内层空目录
+                {
+                    foreach (var dir2 in deletingDirsInThisTopDir)//内存循环，dir2为外层空目录
+                    {
+                        if (dir1 == dir2)
+                        {
+                            continue;
+                        }
+                        if (dir1.StartsWith(dir2))//如果dir2位于dir1的外层，那么dir1就不需要单独删除
+                        {
+                            deletingDirsInThisTopDir.Remove(dir1);
+                            break;
+                        }
+                    }
+                }
+
+                DeletingDirectories.AddRange(deletingDirsInThisTopDir.Select(p => new SyncFile() { Path = p, TopDirectory = topDir }));
+            }
+        }
+
+        public void DeleteEmptyDirectories(DeleteMode deleteMode)
+        {
+            foreach (var dir in DeletingDirectories)
+            {
+                Delete(dir.TopDirectory, dir.Path, deleteMode);
+            }
+        }
+
+        public void Update(DeleteMode deleteMode)
         {
             stopping = false;
             var updateFiles = UpdateFiles.Where(p => p.Checked).ToList();
@@ -95,7 +216,7 @@ namespace OffsiteBackupOfflineSync.Utility
 
             InvokeProgressReceivedEvent(0, totalLength);
             //更新文件
-            foreach (var file in updateFiles.OrderByDescending(p=>p.UpdateType))
+            foreach (var file in updateFiles.OrderByDescending(p => p.UpdateType))
             {
                 //先处理移动，然后处理修改，这样能避免一些问题（2022-12-17）
                 if (stopping)
@@ -114,8 +235,8 @@ namespace OffsiteBackupOfflineSync.Utility
                     {
                         throw new Exception("补丁文件不存在");
                     }
-                    string target = Path.Combine(offsiteDir, file.Path);
-                    string oldPath = file.OldPath == null ? null : Path.Combine(offsiteDir, file.OldPath);
+                    string target = Path.Combine(file.TopDirectory, file.Path);
+                    string oldPath = file.OldPath == null ? null : Path.Combine(file.TopDirectory, file.OldPath);
                     if (!Directory.Exists(Path.GetDirectoryName(target)))
                     {
                         Directory.CreateDirectory(Path.GetDirectoryName(target));
@@ -125,7 +246,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         case FileUpdateType.Add:
                             if (File.Exists(target))
                             {
-                                Delete(offsiteDir, target, deletedDir, deleteMode);
+                                Delete(file.TopDirectory, target, deleteMode);
                             }
                             File.Copy(patch, target);
                             File.SetLastWriteTime(target, file.LastWriteTime);
@@ -134,7 +255,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         case FileUpdateType.Modify:
                             if (File.Exists(target))
                             {
-                                Delete(offsiteDir, target, deletedDir, deleteMode);
+                                Delete(file.TopDirectory, target, deleteMode);
                             }
                             File.Copy(patch, target);
                             File.SetLastWriteTime(target, file.LastWriteTime);
@@ -145,7 +266,7 @@ namespace OffsiteBackupOfflineSync.Utility
                             {
                                 throw new Exception("应当为待删除文件，但文件不存在");
                             }
-                            Delete(offsiteDir, target, deletedDir, deleteMode);
+                            Delete(file.TopDirectory, target, deleteMode);
                             break;
 
                         case FileUpdateType.Move:
@@ -171,67 +292,13 @@ namespace OffsiteBackupOfflineSync.Utility
             }
 
         }
-
-        public void AnalyzeEmptyDirectories(string offsiteDir, DeleteMode deleteMode)
-        {
-            InvokeMessageReceivedEvent($"正在查找空目录");
-            DeletingDirectories = new List<string>();
-            //清理空目录
-            foreach (var offsiteTopDir in Directory.EnumerateDirectories(offsiteDir).ToList())
-            {
-                //本地不存在远程的顶级目录，跳过
-                if (!LocalDirectories.Contains(Path.GetRelativePath(offsiteDir, offsiteTopDir)))
-                {
-                    continue;
-                }
-
-                foreach (var offsiteSubDir in Directory.EnumerateDirectories(offsiteTopDir, "*", SearchOption.AllDirectories).ToList())
-                {
-                    if (stopping)
-                    {
-                        throw new OperationCanceledException();
-                    }
-                    if (!LocalDirectories.Contains(Path.GetRelativePath(offsiteDir, offsiteSubDir)))//本地已经没有远程的这个目录了
-                    {
-                        if (!Directory.EnumerateFiles(offsiteSubDir).Any())//并且远程的这个目录是空的
-                        {
-                            DeletingDirectories.Add(offsiteSubDir);
-                        }
-                    }
-                }
-            }
-
-
-            //通过两层循环，删除位于空目录下的空目录
-            foreach (var dir1 in DeletingDirectories.ToList())//外层循环，dir1为内层空目录
-            {
-                foreach (var dir2 in DeletingDirectories)//内存循环，dir2为外层空目录
-                {
-                    if (dir1 == dir2)
-                    {
-                        continue;
-                    }
-                    if (dir1.StartsWith(dir2))//如果dir2位于dir1的外层，那么dir1就不需要单独删除
-                    {
-                        DeletingDirectories.Remove(dir1);
-                        break;
-                    }
-                }
-            }
-        }
-        public void DeleteEmptyDirectories(string offsiteDir, string deletedDir, DeleteMode deleteMode)
-        {
-            foreach (var dir in DeletingDirectories)
-            {
-                Delete(offsiteDir, dir, deletedDir, deleteMode);
-            }
-        }
         private static bool IsDirectory(string path)
         {
             FileAttributes attr = File.GetAttributes(path);
             return attr.HasFlag(FileAttributes.Directory);
         }
-        private static void Delete(string rootDir, string filePath, string deletedFolder, DeleteMode deleteMode)
+
+        private void Delete(string rootDir, string filePath, DeleteMode deleteMode)
         {
             Debug.Assert(IsDirectory(filePath) || true);
             if (!filePath.StartsWith(rootDir))
@@ -255,6 +322,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     break;
                 case DeleteMode.MoveToDeletedFolder:
                     string relative = Path.GetRelativePath(rootDir, filePath);
+                    string deletedFolder = Path.Combine(Path.GetPathRoot(filePath), DeleteDirName, createTime.ToString("yyyyMMdd-HHmmss"));
                     string target = Path.Combine(deletedFolder, relative);
                     string dir = Path.GetDirectoryName(target);
                     if (!Directory.Exists(dir))
@@ -274,70 +342,6 @@ namespace OffsiteBackupOfflineSync.Utility
                     throw new InvalidEnumArgumentException();
             }
 
-        }
-
-
-        public static string GetNoDuplicateFile(string path, string suffixFormat = " ({i})")
-        {
-            if (!File.Exists(path))
-            {
-                return path;
-            }
-
-            if (!suffixFormat.Contains("{i}"))
-            {
-                throw new ArgumentException("后缀应包含“{i}”以表示索引");
-            }
-
-            int num = 2;
-            string directoryName = Path.GetDirectoryName(path);
-            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
-            string extension = Path.GetExtension(path);
-            string text;
-            while (true)
-            {
-                text = Path.Combine(directoryName, fileNameWithoutExtension + suffixFormat.Replace("{i}", num.ToString()) + extension);
-                if (!File.Exists(text))
-                {
-                    break;
-                }
-
-                num++;
-            }
-
-            return text;
-        }
-
-
-        public static string GetNoDuplicateDirectory(string path, string suffixFormat = " ({i})")
-        {
-            if (!Directory.Exists(path))
-            {
-                return path;
-            }
-
-            if (!suffixFormat.Contains("{i}"))
-            {
-                throw new ArgumentException("后缀应包含“{i}”以表示索引");
-            }
-
-            int num = 2;
-            string directoryName = Path.GetDirectoryName(path);
-            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
-            string extension = Path.GetExtension(path);
-            string text;
-            while (true)
-            {
-                text = Path.Combine(directoryName, fileNameWithoutExtension + suffixFormat.Replace("{i}", num.ToString()) + extension);
-                if (!Directory.Exists(text))
-                {
-                    break;
-                }
-
-                num++;
-            }
-
-            return text;
         }
     }
 
