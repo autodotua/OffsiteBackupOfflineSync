@@ -18,6 +18,21 @@ namespace OffsiteBackupOfflineSync.WPF.UI
 
         private async void TestButton_Click(object sender, System.Windows.RoutedEventArgs e)
         {
+            IsEnabled = false;
+            try
+            {
+                await TestUtility.TestAll();
+                await CommonDialog.ShowOkDialogAsync("断言全部通过");
+            }
+            catch (Exception ex)
+            {
+                await CommonDialog.ShowErrorDialogAsync(ex);
+            }
+            IsEnabled = true;
+        }
+
+        private async void GenerateTestFilesButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
             string path = new CommonOpenFileDialog().GetFolderPath();
             if (path != null)
             {

@@ -130,25 +130,9 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
-
                     string[] localSearchingDirs = ViewModel.LocalDir.Split(new char[] { '|', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                     step1 = Step1Utility.ReadStep1Model(ViewModel.OffsiteSnapshot);
-                    ViewModel.MatchingDirs = new ObservableCollection<LocalAndOffsiteDir>(
-                        step1.Files
-                        .Select(p=>p.TopDirectory)
-                        .Distinct()
-                        .Select(p => new LocalAndOffsiteDir() { OffsiteDir = p, }));
-                    var matchingDirsDic = ViewModel.MatchingDirs.ToDictionary(p => Path.GetFileName(p.OffsiteDir), p => p);
-                    foreach (var localSearchingDir in localSearchingDirs)
-                    {
-                        foreach (var subLocalDir in new DirectoryInfo(localSearchingDir).EnumerateDirectories())
-                        {
-                            if (matchingDirsDic.ContainsKey(subLocalDir.Name))
-                            {
-                                matchingDirsDic[subLocalDir.Name].LocalDir = subLocalDir.FullName;
-                            }
-                        }
-                    }
+                    ViewModel.MatchingDirs = new ObservableCollection<LocalAndOffsiteDir>(Step2Utility.MatchLocalAndOffsiteDirs(step1, localSearchingDirs));
                 });
             }
             catch (OperationCanceledException)

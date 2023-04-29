@@ -2,8 +2,10 @@
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -13,199 +15,10 @@ namespace OffsiteBackupOfflineSync.Utility
 {
     public class Step2Utility : UtilityBase
     {
-        public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
-        public Dictionary<string, List<string>> LocalDirectories { get; } = new Dictionary<string, List<string>>();
         private volatile int index = 0;
         private IEnumerable<LocalAndOffsiteDir> localAndOffsiteDirs;
-
-        /// <summary>
-        /// 搜索
-        /// </summary>
-        /// <param name="localDir">本地目录</param>
-        /// <param name="offsiteSnapshotFile">异地快照文件</param>
-        /// <param name="blackList">黑名单</param>
-        /// <param name="blackListUseRegex">黑名单是否启用正则</param>
-        /// <param name="maxTimeTolerance">对比时修改时间容差</param>
-        public void Search(IEnumerable<LocalAndOffsiteDir> localAndOffsiteDirs, Step1Model offsite, string blackList, bool blackListUseRegex, double maxTimeTolerance, bool checkMoveIgnoreFileName)
-        {
-            stopping = false;
-            UpdateFiles.Clear();
-            LocalDirectories.Clear();
-            index = 0;
-            this.localAndOffsiteDirs = localAndOffsiteDirs;
-
-            InvokeMessageReceivedEvent($"正在初始化");
-            InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
-            //临时的多线程需要更新文件列表
-            ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>();
-            //将异地文件根据顶级目录
-            var offsiteTopDir2Files = offsite.Files.GroupBy(p => p.TopDirectory).ToDictionary(p => p.Key, p => p.ToList());
-            //用于之后寻找差异文件的哈希表
-            ConcurrentDictionary<string, byte> localFiles = new ConcurrentDictionary<string, byte>();
-            HashSet<string> offsiteTopDirs = localAndOffsiteDirs.Select(p => p.OffsiteDir).ToHashSet();
-            if (offsiteTopDirs.Count != localAndOffsiteDirs.Count())
-            {
-                throw new ArgumentException("异地顶级目录存在重复", nameof(localAndOffsiteDirs));
-            }
-            foreach (var file in offsiteTopDir2Files)
-            {
-                if (!offsiteTopDirs.Contains(file.Key))
-                {
-                    throw new ArgumentException($"快照中存在顶级目录{file.Key}但{nameof(localAndOffsiteDirs)}未提供", nameof(localAndOffsiteDirs));
-                }
-            }
-
-            //枚举本地文件，寻找离线快照中是否存在相同文件
-            foreach (var localAndOffsiteDir in localAndOffsiteDirs)
-            {
-                var localDir = new DirectoryInfo(localAndOffsiteDir.LocalDir);
-                InvokeMessageReceivedEvent($"正在查找：{localDir}");
-                var localFileList = localDir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
-
-                //从路径、文件名、时间、长度寻找本地文件的字典
-                string offsiteTopDirectory = localAndOffsiteDir.OffsiteDir;
-                Dictionary<string, SyncFile> offsitePath2File = offsiteTopDir2Files[offsiteTopDirectory].ToDictionary(p => p.Path);
-                Dictionary<string, List<SyncFile>> offsiteName2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Name).ToDictionary(p => p.Key, p => p.ToList());
-                Dictionary<DateTime, List<SyncFile>> offsiteTime2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.LastWriteTime).ToDictionary(p => p.Key, p => p.ToList());
-                Dictionary<long, List<SyncFile>> offsiteLength2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Length).ToDictionary(p => p.Key, p => p.ToList());
-
-
-#if DEBUG
-                foreach (var file in localFileList)
-                {
-#else
-                Parallel.ForEach(localFileList, (file, state) =>
-                {
-#endif
-
-#if DEBUG
-                    TestUtility.SleepInDebug();
-                    Debug.WriteLine(file);
-#endif
-                    if (stopping)
-                    {
-#if DEBUG
-                        break;
-#else
-                        state.Stop();
-#endif
-                    }
-                    string relativePath = Path.GetRelativePath(localDir.FullName, file.FullName);
-                    InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
-                    localFiles.TryAdd(relativePath, 0);
-                    if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
-                    {
-#if DEBUG
-                        break;
-#else
-                        return;
-#endif
-                    }
-
-                    if (offsitePath2File.ContainsKey(relativePath))//路径相同，说明是没有变化或者文件被修改
-                    {
-                        var offsiteFile = offsitePath2File[relativePath];
-                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).Duration().TotalSeconds < maxTimeTolerance
-                        && offsiteFile.Length == file.Length)//文件没有发生改动
-                        {
-#if DEBUG
-                            break;
-#else
-                        return;
-#endif
-                        }
-
-                        //文件发生改变
-                        var newFile = new SyncFile()
-                        {
-                            Path = relativePath,
-                            Name = file.Name,
-                            Length = file.Length,
-                            LastWriteTime = file.LastWriteTime,
-                            UpdateType = FileUpdateType.Modify,
-                            TopDirectory = offsiteTopDirectory,
-                        };
-                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).TotalSeconds > maxTimeTolerance)
-                        {
-                            newFile.Message = "异地文件时间晚于本地文件时间";
-                        }
-                        tempUpdateFiles.Add(newFile);
-                    }
-                    else //新增文件或文件被移动或重命名
-                    {
-                        var sameFiles = !checkMoveIgnoreFileName ?
-                            (offsiteTime2File.GetOrDefault(file.LastWriteTime) ?? Enumerable.Empty<SyncFile>())
-                            .Intersect(offsiteLength2File.GetOrDefault(file.Length) ?? Enumerable.Empty<SyncFile>()) :
-                            (offsiteName2File.GetOrDefault(file.Name) ?? Enumerable.Empty<SyncFile>())
-                             .Intersect(offsiteTime2File.GetOrDefault(file.LastWriteTime) ?? Enumerable.Empty<SyncFile>())
-                             .Intersect(offsiteLength2File.GetOrDefault(file.Length) ?? Enumerable.Empty<SyncFile>());
-                        if (sameFiles.Count() == 1)//存在被移动或重命名的文件，并且为一对一关系
-                        {
-                            var offsiteMovedFile = sameFiles.First();
-                            var movedFile = new SyncFile()
-                            {
-                                Path = relativePath,
-                                OldPath = offsiteMovedFile.Path,
-                                Name = file.Name,
-                                Length = file.Length,
-                                LastWriteTime = file.LastWriteTime,
-                                UpdateType = FileUpdateType.Move,
-                                TopDirectory = offsiteTopDirectory,
-                            };
-                            tempUpdateFiles.Add(movedFile);
-                            localFiles.TryAdd(offsiteMovedFile.Path, 0);//如果被移动了，那么不需要进行删除判断，所以要把异地的文件地址也加入进去。
-                        }
-                        else//新增文件
-                        {
-                            var newFile = new SyncFile()
-                            {
-                                Path = relativePath,
-                                Name = file.Name,
-                                Length = file.Length,
-                                LastWriteTime = file.LastWriteTime,
-                                UpdateType = FileUpdateType.Add,
-                                TopDirectory = offsiteTopDirectory,
-                            };
-                            tempUpdateFiles.Add(newFile);
-                        }
-                    }
-#if DEBUG
-                }
-#else
-            });
-#endif
-
-                if (stopping)
-                {
-                    throw new OperationCanceledException();
-                }
-                List<string> localSubDirs = new List<string>();
-                foreach (var subDir in localDir.EnumerateDirectories("*", SearchOption.AllDirectories))
-                {
-                    string relativePath = Path.GetRelativePath(localDir.FullName, subDir.FullName);
-                    localSubDirs.Add(relativePath);
-                }
-                LocalDirectories.Add(localAndOffsiteDir.OffsiteDir, localSubDirs);
-            }
-            UpdateFiles.AddRange(tempUpdateFiles);
-
-            //枚举异地快照，查找本地文件中不存在的文件
-            index = 0;
-            foreach (var file in offsite.Files)
-            {
-                if (IsInBlackList(file.Name, file.Path, blacks, blackRegexs, blackListUseRegex))
-                {
-                    continue;
-                }
-                InvokeMessageReceivedEvent($"正在查找删除的文件：{++index} / {offsite.Files.Count}");
-                if (!localFiles.ContainsKey(file.Path))
-                {
-                    file.UpdateType = FileUpdateType.Delete;
-                    UpdateFiles.Add(file);
-                }
-            }
-        }
-
+        public Dictionary<string, List<string>> LocalDirectories { get; } = new Dictionary<string, List<string>>();
+        public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
         public bool Export(string outputDir, bool hardLink)
         {
             bool allOk = true;
@@ -313,15 +126,193 @@ namespace OffsiteBackupOfflineSync.Utility
             return allOk;
         }
 
-        private string GetTempFileName(SyncFile file, SHA256 sha256)
+        /// <summary>
+        /// 搜索
+        /// </summary>
+        /// <param name="localDir">本地目录</param>
+        /// <param name="offsiteSnapshotFile">异地快照文件</param>
+        /// <param name="blackList">黑名单</param>
+        /// <param name="blackListUseRegex">黑名单是否启用正则</param>
+        /// <param name="maxTimeTolerance">对比时修改时间容差</param>
+        public void Search(IEnumerable<LocalAndOffsiteDir> localAndOffsiteDirs, Step1Model offsite, string blackList, bool blackListUseRegex, double maxTimeTolerance, bool checkMoveIgnoreFileName)
         {
-            string featureCode = $"{file.TopDirectory}{file.Path}{file.LastWriteTime}{file.Length}";
+            stopping = false;
+            UpdateFiles.Clear();
+            LocalDirectories.Clear();
+            index = 0;
+            this.localAndOffsiteDirs = localAndOffsiteDirs;
 
-            var bytes = Encoding.UTF8.GetBytes(featureCode);
-            var code = sha256.ComputeHash(bytes);
-            return Convert.ToHexString(code);
+            InvokeMessageReceivedEvent($"正在初始化");
+            InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
+            //临时的多线程需要更新文件列表
+            ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>();
+            //将异地文件根据顶级目录
+            var offsiteTopDir2Files = offsite.Files.GroupBy(p => p.TopDirectory).ToDictionary(p => p.Key, p => p.ToList());
+            //用于之后寻找差异文件的哈希表
+            ConcurrentDictionary<string, byte> localFiles = new ConcurrentDictionary<string, byte>();
+            HashSet<string> offsiteTopDirs = localAndOffsiteDirs.Select(p => p.OffsiteDir).ToHashSet();
+            if (offsiteTopDirs.Count != localAndOffsiteDirs.Count())
+            {
+                throw new ArgumentException("异地顶级目录存在重复", nameof(localAndOffsiteDirs));
+            }
+            foreach (var file in offsiteTopDir2Files)
+            {
+                if (!offsiteTopDirs.Contains(file.Key))
+                {
+                    throw new ArgumentException($"快照中存在顶级目录{file.Key}但{nameof(localAndOffsiteDirs)}未提供", nameof(localAndOffsiteDirs));
+                }
+            }
+
+            //枚举本地文件，寻找离线快照中是否存在相同文件
+            foreach (var localAndOffsiteDir in localAndOffsiteDirs)
+            {
+                var localDir = new DirectoryInfo(localAndOffsiteDir.LocalDir);
+                InvokeMessageReceivedEvent($"正在查找：{localDir}");
+                var localFileList = localDir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
+
+                //从路径、文件名、时间、长度寻找本地文件的字典
+                string offsiteTopDirectory = localAndOffsiteDir.OffsiteDir;
+                Dictionary<string, SyncFile> offsitePath2File = offsiteTopDir2Files[offsiteTopDirectory].ToDictionary(p => p.Path);
+                Dictionary<string, List<SyncFile>> offsiteName2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Name).ToDictionary(p => p.Key, p => p.ToList());
+                Dictionary<DateTime, List<SyncFile>> offsiteTime2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.LastWriteTime).ToDictionary(p => p.Key, p => p.ToList());
+                Dictionary<long, List<SyncFile>> offsiteLength2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Length).ToDictionary(p => p.Key, p => p.ToList());
+
+
+#if DEBUG
+                foreach (var file in localFileList)
+                {
+#else
+                Parallel.ForEach(localFileList, (file, state) =>
+                {
+#endif
+
+#if DEBUG
+                    TestUtility.SleepInDebug();
+                    Debug.WriteLine(file);
+#endif
+                    if (stopping)
+                    {
+#if DEBUG
+                        break;
+#else
+                        state.Stop();
+#endif
+                    }
+                    string relativePath = Path.GetRelativePath(localDir.FullName, file.FullName);
+                    InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
+                    localFiles.TryAdd(relativePath, 0);
+                    if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
+                    {
+#if DEBUG
+                        continue;
+#else
+                        return;
+#endif
+                    }
+
+                    if (offsitePath2File.ContainsKey(relativePath))//路径相同，说明是没有变化或者文件被修改
+                    {
+                        var offsiteFile = offsitePath2File[relativePath];
+                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).Duration().TotalSeconds < maxTimeTolerance
+                        && offsiteFile.Length == file.Length)//文件没有发生改动
+                        {
+#if DEBUG
+                            continue;
+#else
+                        return;
+#endif
+                        }
+
+                        //文件发生改变
+                        var newFile = new SyncFile()
+                        {
+                            Path = relativePath,
+                            Name = file.Name,
+                            Length = file.Length,
+                            LastWriteTime = file.LastWriteTime,
+                            UpdateType = FileUpdateType.Modify,
+                            TopDirectory = offsiteTopDirectory,
+                        };
+                        if ((offsiteFile.LastWriteTime - file.LastWriteTime).TotalSeconds > maxTimeTolerance)
+                        {
+                            newFile.Message = "异地文件时间晚于本地文件时间";
+                        }
+                        tempUpdateFiles.Add(newFile);
+                    }
+                    else //新增文件或文件被移动或重命名
+                    {
+                        var sameFiles = !checkMoveIgnoreFileName ?
+                            (offsiteTime2File.GetOrDefault(file.LastWriteTime) ?? Enumerable.Empty<SyncFile>())
+                            .Intersect(offsiteLength2File.GetOrDefault(file.Length) ?? Enumerable.Empty<SyncFile>()) :
+                            (offsiteName2File.GetOrDefault(file.Name) ?? Enumerable.Empty<SyncFile>())
+                             .Intersect(offsiteTime2File.GetOrDefault(file.LastWriteTime) ?? Enumerable.Empty<SyncFile>())
+                             .Intersect(offsiteLength2File.GetOrDefault(file.Length) ?? Enumerable.Empty<SyncFile>());
+                        if (sameFiles.Count() == 1)//存在被移动或重命名的文件，并且为一对一关系
+                        {
+                            var offsiteMovedFile = sameFiles.First();
+                            var movedFile = new SyncFile()
+                            {
+                                Path = relativePath,
+                                OldPath = offsiteMovedFile.Path,
+                                Name = file.Name,
+                                Length = file.Length,
+                                LastWriteTime = file.LastWriteTime,
+                                UpdateType = FileUpdateType.Move,
+                                TopDirectory = offsiteTopDirectory,
+                            };
+                            tempUpdateFiles.Add(movedFile);
+                            localFiles.TryAdd(offsiteMovedFile.Path, 0);//如果被移动了，那么不需要进行删除判断，所以要把异地的文件地址也加入进去。
+                        }
+                        else//新增文件
+                        {
+                            var newFile = new SyncFile()
+                            {
+                                Path = relativePath,
+                                Name = file.Name,
+                                Length = file.Length,
+                                LastWriteTime = file.LastWriteTime,
+                                UpdateType = FileUpdateType.Add,
+                                TopDirectory = offsiteTopDirectory,
+                            };
+                            tempUpdateFiles.Add(newFile);
+                        }
+                    }
+#if DEBUG
+                }
+#else
+            });
+#endif
+
+                if (stopping)
+                {
+                    throw new OperationCanceledException();
+                }
+                List<string> localSubDirs = new List<string>();
+                foreach (var subDir in localDir.EnumerateDirectories("*", SearchOption.AllDirectories))
+                {
+                    string relativePath = Path.GetRelativePath(localDir.FullName, subDir.FullName);
+                    localSubDirs.Add(relativePath);
+                }
+                LocalDirectories.Add(localAndOffsiteDir.OffsiteDir, localSubDirs);
+            }
+            UpdateFiles.AddRange(tempUpdateFiles);
+
+            //枚举异地快照，查找本地文件中不存在的文件
+            index = 0;
+            foreach (var file in offsite.Files)
+            {
+                if (IsInBlackList(file.Name, file.Path, blacks, blackRegexs, blackListUseRegex))
+                {
+                    continue;
+                }
+                InvokeMessageReceivedEvent($"正在查找删除的文件：{++index} / {offsite.Files.Count}");
+                if (!localFiles.ContainsKey(file.Path))
+                {
+                    file.UpdateType = FileUpdateType.Delete;
+                    UpdateFiles.Add(file);
+                }
+            }
         }
-
         [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
 
@@ -347,6 +338,37 @@ namespace OffsiteBackupOfflineSync.Utility
             {
                 throw new Exception($"未知错误，无法创建硬链接：" + Marshal.GetLastWin32Error());
             }
+        }
+
+        private string GetTempFileName(SyncFile file, SHA256 sha256)
+        {
+            string featureCode = $"{file.TopDirectory}{file.Path}{file.LastWriteTime}{file.Length}";
+
+            var bytes = Encoding.UTF8.GetBytes(featureCode);
+            var code = sha256.ComputeHash(bytes);
+            return Convert.ToHexString(code);
+        }
+
+        public static IList<LocalAndOffsiteDir> MatchLocalAndOffsiteDirs(Step1Model step1, string[] localSearchingDirs)
+        {
+            var matchingDirs =
+                 step1.Files
+                 .Select(p => p.TopDirectory)
+                 .Distinct()
+                 .Select(p => new LocalAndOffsiteDir() { OffsiteDir = p, })
+                 .ToList();
+            var matchingDirsDic = matchingDirs.ToDictionary(p => Path.GetFileName(p.OffsiteDir), p => p);
+            foreach (var localSearchingDir in localSearchingDirs)
+            {
+                foreach (var subLocalDir in new DirectoryInfo(localSearchingDir).EnumerateDirectories())
+                {
+                    if (matchingDirsDic.ContainsKey(subLocalDir.Name))
+                    {
+                        matchingDirsDic[subLocalDir.Name].LocalDir = subLocalDir.FullName;
+                    }
+                }
+            }
+            return matchingDirs;
         }
     }
 

@@ -78,7 +78,7 @@
                 </Grid>
                 <Grid HorizontalAlignment="Right">
                     <Button
-                        Padding="32,4"
+                        Width="128"
                         Click="MatchDirsButton_Click"
                         Content="1. 匹配目录" />
                 </Grid>
@@ -161,7 +161,7 @@
                 </Grid>
                 <Grid HorizontalAlignment="Right">
                     <Button
-                        Padding="32,4"
+                        Width="128"
                         Click="SearchChangeButton_Click"
                         Content="2. 查找更改" />
                 </Grid>
@@ -221,7 +221,7 @@
                         IsReadOnly="True" />
                     <DataGridTextColumn
                         Width="400"
-                        Binding="{Binding .,Converter={StaticResource SyncFilePathConverter}}"
+                        Binding="{Binding ., Converter={StaticResource SyncFilePathConverter}}"
                         ElementStyle="{StaticResource DataGridCheckBoxColumnTextWrappingStyle}"
                         Header="路径"
                         IsReadOnly="True" />
@@ -309,16 +309,14 @@
                 <Button
                     HorizontalAlignment="Stretch"
                     Click="SelectAllButton_Click"
-                    IsEnabled="{Binding CanEditConfigs}">
-                    <ui:SymbolIcon Symbol="SelectAll" />
-                </Button>
+                    Content="全选"
+                    IsEnabled="{Binding CanEditConfigs}" />
                 <Button
                     Grid.Column="2"
                     HorizontalAlignment="Stretch"
                     Click="SelectNoneButton_Click"
-                    IsEnabled="{Binding CanEditConfigs}">
-                    <ui:SymbolIcon Symbol="ClearSelection" />
-                </Button>
+                    Content="全不选"
+                    IsEnabled="{Binding CanEditConfigs}" />
             </ui:SimpleStackPanel>
         </Grid>
         <Grid

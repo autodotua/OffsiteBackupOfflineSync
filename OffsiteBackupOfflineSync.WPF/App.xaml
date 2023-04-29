@@ -22,6 +22,11 @@
                 <Setter Property="HorizontalAlignment" Value="Left" />
                 <Setter Property="Margin" Value="8,4" />
             </Style>
+            <Style
+                BasedOn="{StaticResource DefaultButtonStyle}"
+                TargetType="{x:Type Button}">
+                <Setter Property="Width" Value="96" />
+            </Style>
             <converters:SyncFilePathConverter x:Key="SyncFilePathConverter" />
         </ResourceDictionary>
     </Application.Resources>

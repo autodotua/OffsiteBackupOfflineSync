@@ -17,14 +17,13 @@ namespace OffsiteBackupOfflineSync.UI
     /// </summary>
     public partial class Step3 : UserControl
     {
-        private readonly Step3Utility u = new Step3Utility();
+        private Step3Utility u = null;
 
         public Step3(Step3ViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
-            PanelHelper.RegisterMessageAndProgressEvent(u, viewModel);
         }
 
         public Step3ViewModel ViewModel { get; }
@@ -43,6 +42,8 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
+                Step3Utility u = new Step3Utility();
+                PanelHelper.RegisterMessageAndProgressEvent(u, ViewModel);
                 ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
                 {
@@ -95,7 +96,7 @@ namespace OffsiteBackupOfflineSync.UI
                 await Task.Run(() =>
                 {
                     u.Update(ViewModel.DeleteMode);
-                    u.AnalyzeEmptyDirectories(ViewModel.DeleteMode);
+                    u.AnalyzeEmptyDirectories();
                 });
 
                 if (u.DeletingDirectories.Any())

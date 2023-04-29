@@ -8,6 +8,7 @@ namespace OffsiteBackupOfflineSync.Utility
 {
     public class Step3Utility : UtilityBase
     {
+        private readonly DateTime createTime = DateTime.Now;
         public const string DeleteDirName = "异地备份离线同步-删除的文件";
         private string patchDir;
         public List<SyncFile> DeletingDirectories { get; private set; }
@@ -149,7 +150,7 @@ namespace OffsiteBackupOfflineSync.Utility
 
         }
 
-        public void AnalyzeEmptyDirectories(DeleteMode deleteMode)
+        public void AnalyzeEmptyDirectories()
         {
             InvokeMessageReceivedEvent($"正在查找空目录");
             DeletingDirectories = new List<SyncFile>();
@@ -293,7 +294,7 @@ namespace OffsiteBackupOfflineSync.Utility
             }
 
         }
-        private static void Delete(string rootDir, string filePath, DeleteMode deleteMode)
+        private void Delete(string rootDir, string filePath, DeleteMode deleteMode)
         {
             Debug.Assert(IsDirectory(filePath) || true);
             if (!filePath.StartsWith(rootDir))
@@ -317,7 +318,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     break;
                 case DeleteMode.MoveToDeletedFolder:
                     string relative = Path.GetRelativePath(rootDir, filePath);
-                    string deletedFolder = Path.Combine(Path.GetPathRoot(filePath), DeleteDirName);
+                    string deletedFolder = Path.Combine(Path.GetPathRoot(filePath), DeleteDirName, createTime.ToString("yyyyMMdd-HHmmss"));
                     string target = Path.Combine(deletedFolder, relative);
                     string dir = Path.GetDirectoryName(target);
                     if (!Directory.Exists(dir))
