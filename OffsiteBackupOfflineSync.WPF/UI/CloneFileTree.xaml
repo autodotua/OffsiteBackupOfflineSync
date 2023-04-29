@@ -43,7 +43,7 @@
                 <Button
                     Grid.Column="4"
                     Click="BrowseSourceDirButton_Click"
-                    Content="浏览" />
+                    Content="浏览.." />
 
                 <TextBlock
                     Grid.Row="2"
@@ -57,7 +57,7 @@
                     Grid.Row="2"
                     Grid.Column="4"
                     Click="BrowseDestDirButton_Click"
-                    Content="浏览" />
+                    Content="浏览.." />
             </Grid>
             <Grid HorizontalAlignment="Right">
                 <Button

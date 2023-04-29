@@ -43,7 +43,7 @@
                 <Button
                     Grid.Column="4"
                     Click="BrowsePatchDirButton_Click"
-                    Content="浏览" />
+                    Content="浏览.." />
 
             </Grid>
             <Grid HorizontalAlignment="Right">

@@ -42,7 +42,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             try
             {
-                Step3Utility u = new Step3Utility();
+                u = new Step3Utility();
                 PanelHelper.RegisterMessageAndProgressEvent(u, ViewModel);
                 ViewModel.UpdateStatus(StatusType.Analyzing);
                 await Task.Run(() =>
@@ -103,7 +103,7 @@ namespace OffsiteBackupOfflineSync.UI
                 {
                     if (await CommonDialog.ShowYesNoDialogAsync("删除空目录",
                         $"有{u.DeletingDirectories.Count}个已不存在于本地的空目录，是否删除？",
-                        string.Join(Environment.NewLine, u.DeletingDirectories.Select(p=>Path.Combine(p.TopDirectory,p.Path)))))
+                        string.Join(Environment.NewLine, u.DeletingDirectories.Select(p => Path.Combine(p.TopDirectory, p.Path)))))
                     {
                         u.DeleteEmptyDirectories(ViewModel.DeleteMode);
                     }

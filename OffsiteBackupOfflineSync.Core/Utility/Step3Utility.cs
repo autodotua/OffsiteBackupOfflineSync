@@ -1,5 +1,4 @@
 ﻿using FzLib.IO;
-using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -8,8 +7,8 @@ namespace OffsiteBackupOfflineSync.Utility
 {
     public class Step3Utility : UtilityBase
     {
-        private readonly DateTime createTime = DateTime.Now;
         public const string DeleteDirName = "异地备份离线同步-删除的文件";
+        private readonly DateTime createTime = DateTime.Now;
         private string patchDir;
         public List<SyncFile> DeletingDirectories { get; private set; }
         public Dictionary<string, List<string>> LocalDirectories { get; private set; }
@@ -80,8 +79,7 @@ namespace OffsiteBackupOfflineSync.Utility
         {
             stopping = false;
             this.patchDir = patchDir;
-            var json = File.ReadAllText(Path.Combine(patchDir, "file.obos2"));
-            var step2 = JsonConvert.DeserializeObject<Step2Model>(json);
+            var step2 = ReadFromZip<Step2Model>(Path.Combine(patchDir, "file.obos2"));
 
             UpdateFiles = step2.Files;
             LocalDirectories = step2.LocalDirectories;
@@ -294,6 +292,12 @@ namespace OffsiteBackupOfflineSync.Utility
             }
 
         }
+        private static bool IsDirectory(string path)
+        {
+            FileAttributes attr = File.GetAttributes(path);
+            return attr.HasFlag(FileAttributes.Directory);
+        }
+
         private void Delete(string rootDir, string filePath, DeleteMode deleteMode)
         {
             Debug.Assert(IsDirectory(filePath) || true);
@@ -338,12 +342,6 @@ namespace OffsiteBackupOfflineSync.Utility
                     throw new InvalidEnumArgumentException();
             }
 
-        }
-
-        private static bool IsDirectory(string path)
-        {
-            FileAttributes attr = File.GetAttributes(path);
-            return attr.HasFlag(FileAttributes.Directory);
         }
     }
 

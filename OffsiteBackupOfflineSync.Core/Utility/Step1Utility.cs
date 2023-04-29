@@ -1,19 +1,21 @@
 ﻿using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
+using System.IO.Compression;
+using System.Reflection;
+using System.Text;
 
 namespace OffsiteBackupOfflineSync.Utility
 {
     public class Step1Utility : UtilityBase
     {
         private volatile int index = 0;
-        public static Step1Model ReadStep1Model(string jsonPath)
+        public static Step1Model ReadStep1Model(string outputPath)
         {
-
-            return JsonConvert.DeserializeObject<Step1Model>(File.ReadAllText(jsonPath));
+            return ReadFromZip<Step1Model>(outputPath);
         }
 
-        public Step1Model Enumerate(IEnumerable<string> dirs, string jsonPath)
+        public Step1Model Enumerate(IEnumerable<string> dirs, string outputPath)
         {
             stopping = false;
             index = 0;
@@ -49,12 +51,11 @@ namespace OffsiteBackupOfflineSync.Utility
             {
                 Files = syncFiles.ToList(),
             };
-            var json = JsonConvert.SerializeObject(model, Formatting.Indented);
-            File.WriteAllText(jsonPath, json);
+            WriteToZip(model, outputPath);
             return model;
         }
-    }
 
+    }
 }
 
 

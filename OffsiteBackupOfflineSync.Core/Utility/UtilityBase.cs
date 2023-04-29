@@ -1,9 +1,12 @@
 ﻿using FzLib;
+using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using System;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace OffsiteBackupOfflineSync.Utility
@@ -173,6 +176,32 @@ namespace OffsiteBackupOfflineSync.Utility
                 return dateTime;
             }
             return dateTime.AddTicks(-(dateTime.Ticks % oneSecond.Ticks));
+        }
+
+
+        protected static void WriteToZip(object obj, string zipPath)
+        {
+            var json = JsonConvert.SerializeObject(obj, Formatting.Indented);
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            using FileStream fs = new FileStream(zipPath, FileMode.Create);
+            using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Create);
+            using Stream es = zip.CreateEntry("DATA").Open();
+            es.Write(bytes, 0, bytes.Length);
+        }
+
+        protected static T ReadFromZip<T>(string zipPath)
+        {
+            if (!File.Exists(zipPath))
+            {
+                throw new FileNotFoundException();
+            }
+            using FileStream fs = new FileStream(zipPath, FileMode.Open);
+            using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read);
+            using var es = zip.Entries[0].Open();
+            byte[] bytes = new byte[zip.Entries[0].Length];
+            es.Read(bytes, 0, bytes.Length);
+            string json = Encoding.UTF8.GetString(bytes);
+            return JsonConvert.DeserializeObject<T>(json);
         }
     }
 }

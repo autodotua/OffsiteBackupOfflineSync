@@ -19,6 +19,28 @@ namespace OffsiteBackupOfflineSync.Utility
         private IEnumerable<LocalAndOffsiteDir> localAndOffsiteDirs;
         public Dictionary<string, List<string>> LocalDirectories { get; } = new Dictionary<string, List<string>>();
         public List<SyncFile> UpdateFiles { get; } = new List<SyncFile>();
+        public static IList<LocalAndOffsiteDir> MatchLocalAndOffsiteDirs(Step1Model step1, string[] localSearchingDirs)
+        {
+            var matchingDirs =
+                 step1.Files
+                 .Select(p => p.TopDirectory)
+                 .Distinct()
+                 .Select(p => new LocalAndOffsiteDir() { OffsiteDir = p, })
+                 .ToList();
+            var matchingDirsDic = matchingDirs.ToDictionary(p => Path.GetFileName(p.OffsiteDir), p => p);
+            foreach (var localSearchingDir in localSearchingDirs)
+            {
+                foreach (var subLocalDir in new DirectoryInfo(localSearchingDir).EnumerateDirectories())
+                {
+                    if (matchingDirsDic.ContainsKey(subLocalDir.Name))
+                    {
+                        matchingDirsDic[subLocalDir.Name].LocalDir = subLocalDir.FullName;
+                    }
+                }
+            }
+            return matchingDirs;
+        }
+
         public bool Export(string outputDir, bool hardLink)
         {
             bool allOk = true;
@@ -121,8 +143,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 LocalDirectories = LocalDirectories
             };
 
-            var json = JsonConvert.SerializeObject(model, Formatting.Indented);
-            File.WriteAllText(Path.Combine(outputDir, "file.obos2"), json);
+            WriteToZip(model, Path.Combine(outputDir, "file.obos2"));
             return allOk;
         }
 
@@ -347,28 +368,6 @@ namespace OffsiteBackupOfflineSync.Utility
             var bytes = Encoding.UTF8.GetBytes(featureCode);
             var code = sha256.ComputeHash(bytes);
             return Convert.ToHexString(code);
-        }
-
-        public static IList<LocalAndOffsiteDir> MatchLocalAndOffsiteDirs(Step1Model step1, string[] localSearchingDirs)
-        {
-            var matchingDirs =
-                 step1.Files
-                 .Select(p => p.TopDirectory)
-                 .Distinct()
-                 .Select(p => new LocalAndOffsiteDir() { OffsiteDir = p, })
-                 .ToList();
-            var matchingDirsDic = matchingDirs.ToDictionary(p => Path.GetFileName(p.OffsiteDir), p => p);
-            foreach (var localSearchingDir in localSearchingDirs)
-            {
-                foreach (var subLocalDir in new DirectoryInfo(localSearchingDir).EnumerateDirectories())
-                {
-                    if (matchingDirsDic.ContainsKey(subLocalDir.Name))
-                    {
-                        matchingDirsDic[subLocalDir.Name].LocalDir = subLocalDir.FullName;
-                    }
-                }
-            }
-            return matchingDirs;
         }
     }
 
