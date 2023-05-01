@@ -182,7 +182,7 @@ namespace OffsiteBackupOfflineSync.Utility
         protected static void WriteToZip(object obj, string zipPath)
         {
             var json = JsonConvert.SerializeObject(obj, Formatting.Indented);
-            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            byte[] bytes = new UTF8Encoding(true).GetBytes(json);
             using FileStream fs = new FileStream(zipPath, FileMode.Create);
             using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Create);
             using Stream es = zip.CreateEntry("DATA").Open();
@@ -197,10 +197,8 @@ namespace OffsiteBackupOfflineSync.Utility
             }
             using FileStream fs = new FileStream(zipPath, FileMode.Open);
             using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read);
-            using var es = zip.Entries[0].Open();
-            byte[] bytes = new byte[zip.Entries[0].Length];
-            es.Read(bytes, 0, bytes.Length);
-            string json = Encoding.UTF8.GetString(bytes);
+            TextReader reader = new StreamReader(zip.Entries[0].Open(),new UTF8Encoding(true));
+            string json = reader.ReadToEnd();
             return JsonConvert.DeserializeObject<T>(json);
         }
     }
