@@ -38,20 +38,26 @@ namespace OffsiteBackupOfflineSync
 
                     }
                 }
-                instance.Step1 = instance.Step1 ?? new Step1ViewModel();
-                instance.Step2 = instance.Step2 ?? new Step2ViewModel();
-                instance.Step3 = instance.Step3 ?? new Step3ViewModel();
-                instance.CloneFileTree = instance.CloneFileTree ?? new CloneFileTreeViewModel();
-                instance.FilesGoHome = instance.FilesGoHome ?? new FilesGoHomeViewModel();
                 return instance;
             }
         }
-
-        public Step1ViewModel Step1 { get; set; }
-        public Step2ViewModel Step2 { get; set; }
-        public Step3ViewModel Step3 { get; set; }
-        public CloneFileTreeViewModel CloneFileTree { get; set; }
-        public FilesGoHomeViewModel FilesGoHome { get; set; }
+        public string CurrentConfigName { get; set; } = "默认";
+        public SingleConfig CurrentConfig
+        {
+            get
+            {
+                if (ConfigCollection.ContainsKey(CurrentConfigName))
+                {
+                    return ConfigCollection[CurrentConfigName];
+                }
+                else
+                {
+                    ConfigCollection.Add(CurrentConfigName, new SingleConfig());
+                    return ConfigCollection[CurrentConfigName];
+                }
+            }
+        }
+        public Dictionary<string, SingleConfig> ConfigCollection { get; set; } = new Dictionary<string, SingleConfig>();
 
         public void Save(string path)
         {
@@ -76,4 +82,12 @@ namespace OffsiteBackupOfflineSync
         }
     }
 
+    public class SingleConfig
+    {
+        public Step1ViewModel Step1 { get; set; } = new Step1ViewModel();
+        public Step2ViewModel Step2 { get; set; } = new Step2ViewModel();
+        public Step3ViewModel Step3 { get; set; } = new Step3ViewModel();
+        public CloneFileTreeViewModel CloneFileTree { get; set; } = new CloneFileTreeViewModel();
+        public FilesGoHomeViewModel FilesGoHome { get; set; } = new FilesGoHomeViewModel();
+    }
 }

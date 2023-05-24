@@ -126,8 +126,7 @@
                             IsEnabled="{Binding ElementName=lvwSelectedDirs, Path=SelectedItem, Converter={StaticResource NotNullConverter}}" />
                         <Button
                             Click="RemoveAllSyncDirsButton_Click"
-                            Content="移除全部"
-                            IsEnabled="{Binding SelectedDirs, Converter={StaticResource CountMoreThanZeroConverter}}" />
+                            Content="移除全部" />
                     </ui:SimpleStackPanel>
                 </Grid>
             </GroupBox>
