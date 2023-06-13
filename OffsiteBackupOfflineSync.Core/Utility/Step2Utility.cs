@@ -188,6 +188,7 @@ namespace OffsiteBackupOfflineSync.Utility
             foreach (var localAndOffsiteDir in localAndOffsiteDirs)
             {
                 var localDir = new DirectoryInfo(localAndOffsiteDir.LocalDir);
+                var offsiteDir = new DirectoryInfo(localAndOffsiteDir.OffsiteDir);
                 InvokeMessageReceivedEvent($"正在查找：{localDir}");
                 var localFileList = localDir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
 
@@ -221,7 +222,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                     string relativePath = Path.GetRelativePath(localDir.FullName, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
-                    localFiles.TryAdd(relativePath, 0);
+                    localFiles.TryAdd(Path.Combine(localDir.Name, relativePath), 0);
                     if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
                     {
 #if DEBUG
@@ -282,7 +283,7 @@ namespace OffsiteBackupOfflineSync.Utility
                                 TopDirectory = offsiteTopDirectory,
                             };
                             tempUpdateFiles.Add(movedFile);
-                            localFiles.TryAdd(offsiteMovedFile.Path, 0);//如果被移动了，那么不需要进行删除判断，所以要把异地的文件地址也加入进去。
+                            localFiles.TryAdd(Path.Combine(offsiteDir.Name, offsiteMovedFile.Path), 0);//如果被移动了，那么不需要进行删除判断，所以要把异地的文件地址也加入进去。
                         }
                         else//新增文件
                         {
@@ -315,24 +316,27 @@ namespace OffsiteBackupOfflineSync.Utility
                     localSubDirs.Add(relativePath);
                 }
                 LocalDirectories.Add(localAndOffsiteDir.OffsiteDir, localSubDirs);
+
+                //枚举异地快照，查找本地文件中不存在的文件
+                index = 0;
+                foreach (var file in offsiteTopDir2Files[offsiteTopDirectory])
+                {
+                    var offsitePathWithTopDir = Path.Combine(Path.GetFileName(file.TopDirectory), file.Path);
+                    if (IsInBlackList(file.Name, offsitePathWithTopDir, blacks, blackRegexs, blackListUseRegex))
+                    {
+                        continue;
+                    }
+                    InvokeMessageReceivedEvent($"正在查找删除的文件：{++index} / {offsite.Files.Count}");
+                    if (!localFiles.ContainsKey(offsitePathWithTopDir))
+                    {
+                        file.UpdateType = FileUpdateType.Delete;
+                        UpdateFiles.Add(file);
+                    }
+                }
+
             }
             UpdateFiles.AddRange(tempUpdateFiles);
 
-            //枚举异地快照，查找本地文件中不存在的文件
-            index = 0;
-            foreach (var file in offsite.Files)
-            {
-                if (IsInBlackList(file.Name, file.Path, blacks, blackRegexs, blackListUseRegex))
-                {
-                    continue;
-                }
-                InvokeMessageReceivedEvent($"正在查找删除的文件：{++index} / {offsite.Files.Count}");
-                if (!localFiles.ContainsKey(file.Path))
-                {
-                    file.UpdateType = FileUpdateType.Delete;
-                    UpdateFiles.Add(file);
-                }
-            }
         }
         [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);

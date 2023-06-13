@@ -44,17 +44,18 @@ namespace OffsiteBackupOfflineSync.Utility
                     };
                     var match = Step2Utility.MatchLocalAndOffsiteDirs(s1m, searchingDirs);
                     Step2Utility u2 = new Step2Utility();
-                    u2.Search(match, s1m, "黑.+", true, 2, false);
+                    u2.Search(match, s1m, $"黑名单文件.+{Environment.NewLine}黑名单目录/", true, 2, false);
                     Debug.Assert(u2.UpdateFiles != null);
-                    Debug.Assert(u2.UpdateFiles.Count == 16);
+                    Debug.Assert(u2.UpdateFiles.Count == Count*8);
+                    Debug.Assert(!u2.UpdateFiles.Any(p=>p.Name.Contains('黑')));
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("新建")).All(p => p.UpdateType == FileUpdateType.Add));
-                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("新建")).Count() == 4);
+                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("新建")).Count() == Count*2);
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("删除")).All(p => p.UpdateType == FileUpdateType.Delete));
-                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("删除")).Count() == 4);
+                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("删除")).Count() == Count * 2);
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("移动")).All(p => p.UpdateType == FileUpdateType.Move));
-                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("移动")).Count() == 4);
+                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("移动")).Count() == Count * 2);
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("修改")).All(p => p.UpdateType == FileUpdateType.Modify));
-                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("修改")).Count() == 4);
+                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("修改")).Count() == Count * 2);
 
                     string patchDir = Path.Combine(dir, "patch");
                     u2.Export(patchDir, false);
@@ -77,6 +78,19 @@ namespace OffsiteBackupOfflineSync.Utility
                         .ToList();
 
                     Debug.Assert(localFiles.SequenceEqual(remoteFiles));
+
+                     localFiles = Directory.EnumerateFiles(localDir, "*", SearchOption.AllDirectories)
+                        .Select(p => Path.GetRelativePath(localDir, p))
+                        .Where(p => p.Contains("黑"))
+                        .OrderBy(p=>p)
+                        .ToList();
+                     remoteFiles = Directory.EnumerateFiles(remoteDir, "*", SearchOption.AllDirectories)
+                        .Select(p => Path.GetRelativePath(remoteDir, p))
+                        .Where(p => p.Contains("黑"))
+                        .OrderBy(p => p)
+                        .ToList();
+
+                    Debug.Assert(localFiles.Count==remoteFiles.Count);
 
                     var localDirs=Directory.EnumerateDirectories(localDir,"*", SearchOption.AllDirectories)
                         .Select(p => Path.GetRelativePath(localDir, p))
@@ -147,6 +161,8 @@ namespace OffsiteBackupOfflineSync.Utility
 
             localDir = local.CreateSubdirectory("测试目录");
             remoteDir = remote.CreateSubdirectory("测试目录");
+            var localBlackDir = localDir.CreateSubdirectory("黑名单目录");
+            var remoteBlackDir = remoteDir.CreateSubdirectory("黑名单目录");
             var localMovedDir = local.CreateSubdirectory("已移动文件的目录");
 
             for (int i = 1; i <= Count; i++)
@@ -181,6 +197,10 @@ namespace OffsiteBackupOfflineSync.Utility
                 fileName = Path.Combine(localMovedDir.FullName, $"黑名单文件{i}");
                 CreateRandomFile(fileName);
                 fileName = Path.Combine(remoteDir.FullName, $"黑名单文件{i}");
+                CreateRandomFile(fileName);
+                fileName = Path.Combine(localBlackDir.FullName, $"黑名单目录中的文件{i}");
+                CreateRandomFile(fileName);
+                fileName = Path.Combine(remoteBlackDir.FullName, $"黑名单文件{i}");
                 CreateRandomFile(fileName);
                 File.SetLastWriteTime(fileName, now.AddDays(-1));
             }
