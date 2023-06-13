@@ -22,31 +22,25 @@ namespace OffsiteBackupOfflineSync.Utility
             List<SyncFile> syncFiles = new List<SyncFile>();
             foreach (var dir in dirs)
             {
-                //为了加快速度，用了一些技巧
-                InvokeMessageReceivedEvent($"正在搜索：{dir}，已加入 {syncFiles.Count} 个文件");
-                List<FileInfo> files = new DirectoryInfo(dir)
-                    .EnumerateFiles("*", SearchOption.AllDirectories).ToList();
-
-                SyncFile[] tempFiles = new SyncFile[files.Count]; //临时使用数组以实现多线程并加快速度
-                Parallel.For(0, files.Count, (i, state) =>
+                foreach (var file in new DirectoryInfo(dir).EnumerateFiles("*", SearchOption.AllDirectories))
                 {
                     if (stopping)
                     {
-                        state.Stop();
+                        throw new OperationCanceledException();
                     }
-                    tempFiles[i] = new SyncFile(files[i], dir); //使用索引，一对一映射文件和数组元素的关系
+                    syncFiles.Add(new SyncFile(file, dir));
 #if DEBUG
                     TestUtility.SleepInDebug();
 #endif
-                    InvokeMessageReceivedEvent($"正在加入：{dir}，已加入 {++index} 个文件");
-                });
+                    InvokeMessageReceivedEvent($"正在搜索：{dir}，已加入 {++index} 个文件");
+                }
                 if (stopping)
                 {
                     throw new OperationCanceledException();
                 }
-                syncFiles.AddRange(tempFiles); //加入临时的数组
-                var dirInfo = new DirectoryInfo(dir);
             }
+            InvokeMessageReceivedEvent($"正在保存快照");
+
             Step1Model model = new Step1Model()
             {
                 Files = syncFiles.ToList(),

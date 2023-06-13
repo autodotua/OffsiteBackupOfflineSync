@@ -165,12 +165,10 @@ namespace OffsiteBackupOfflineSync.Utility
 
             InvokeMessageReceivedEvent($"正在初始化");
             InitializeBlackList(blackList, blackListUseRegex, out string[] blacks, out Regex[] blackRegexs);
-            //临时的多线程需要更新文件列表
-            ConcurrentBag<SyncFile> tempUpdateFiles = new ConcurrentBag<SyncFile>();
             //将异地文件根据顶级目录
             var offsiteTopDir2Files = offsite.Files.GroupBy(p => p.TopDirectory).ToDictionary(p => p.Key, p => p.ToList());
             //用于之后寻找差异文件的哈希表
-            ConcurrentDictionary<string, byte> localFiles = new ConcurrentDictionary<string, byte>();
+            Dictionary<string, byte> localFiles = new Dictionary<string, byte>();
             HashSet<string> offsiteTopDirs = localAndOffsiteDirs.Select(p => p.OffsiteDir).ToHashSet();
             if (offsiteTopDirs.Count != localAndOffsiteDirs.Count())
             {
@@ -200,13 +198,8 @@ namespace OffsiteBackupOfflineSync.Utility
                 Dictionary<long, List<SyncFile>> offsiteLength2File = offsiteTopDir2Files[offsiteTopDirectory].GroupBy(p => p.Length).ToDictionary(p => p.Key, p => p.ToList());
 
 
-#if DEBUG
                 foreach (var file in localFileList)
                 {
-#else
-                Parallel.ForEach(localFileList, (file, state) =>
-                {
-#endif
 
 #if DEBUG
                     TestUtility.SleepInDebug();
@@ -214,22 +207,14 @@ namespace OffsiteBackupOfflineSync.Utility
 #endif
                     if (stopping)
                     {
-#if DEBUG
                         break;
-#else
-                        state.Stop();
-#endif
                     }
                     string relativePath = Path.GetRelativePath(localDir.FullName, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
-                    localFiles.TryAdd(Path.Combine(localDir.Name, relativePath), 0);
+                    localFiles.Add(Path.Combine(localDir.Name, relativePath), 0);
                     if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
                     {
-#if DEBUG
                         continue;
-#else
-                        return;
-#endif
                     }
 
                     if (offsitePath2File.ContainsKey(relativePath))//路径相同，说明是没有变化或者文件被修改
@@ -238,11 +223,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         if ((offsiteFile.LastWriteTime - file.LastWriteTime).Duration().TotalSeconds < maxTimeTolerance
                         && offsiteFile.Length == file.Length)//文件没有发生改动
                         {
-#if DEBUG
                             continue;
-#else
-                        return;
-#endif
                         }
 
                         //文件发生改变
@@ -259,7 +240,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         {
                             newFile.Message = "异地文件时间晚于本地文件时间";
                         }
-                        tempUpdateFiles.Add(newFile);
+                        UpdateFiles.Add(newFile);
                     }
                     else //新增文件或文件被移动或重命名
                     {
@@ -282,8 +263,8 @@ namespace OffsiteBackupOfflineSync.Utility
                                 UpdateType = FileUpdateType.Move,
                                 TopDirectory = offsiteTopDirectory,
                             };
-                            tempUpdateFiles.Add(movedFile);
-                            localFiles.TryAdd(Path.Combine(offsiteDir.Name, offsiteMovedFile.Path), 0);//如果被移动了，那么不需要进行删除判断，所以要把异地的文件地址也加入进去。
+                            UpdateFiles.Add(movedFile);
+                            localFiles.Add(Path.Combine(offsiteDir.Name, offsiteMovedFile.Path), 0);//如果被移动了，那么不需要进行删除判断，所以要把异地的文件地址也加入进去。
                         }
                         else//新增文件
                         {
@@ -296,14 +277,10 @@ namespace OffsiteBackupOfflineSync.Utility
                                 UpdateType = FileUpdateType.Add,
                                 TopDirectory = offsiteTopDirectory,
                             };
-                            tempUpdateFiles.Add(newFile);
+                            UpdateFiles.Add(newFile);
                         }
                     }
-#if DEBUG
                 }
-#else
-            });
-#endif
 
                 if (stopping)
                 {
@@ -335,7 +312,6 @@ namespace OffsiteBackupOfflineSync.Utility
                 }
 
             }
-            UpdateFiles.AddRange(tempUpdateFiles);
 
         }
         [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
