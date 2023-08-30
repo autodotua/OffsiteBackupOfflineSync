@@ -57,6 +57,7 @@ namespace OffsiteBackupOfflineSync.Utility
             StringBuilder batScript = new StringBuilder();
             StringBuilder ps1Script = new StringBuilder();
             batScript.AppendLine("@echo off");
+            ps1Script.AppendLine("Import-Module BitsTransfer");
             using var sha256 = SHA256.Create();
             foreach (var file in files)
             {
@@ -166,7 +167,7 @@ namespace OffsiteBackupOfflineSync.Utility
                             ps1Script.AppendLine($"\"文件 {sourceFile} 已存在\"");
                             ps1Script.AppendLine($"}}else{{");
                             ps1Script.AppendLine($"\"正在复制 {sourceFile}\"");
-                            ps1Script.AppendLine($"cp \"{sourceFile}\" \"{file.TempName}\"");
+                            ps1Script.AppendLine($"Start-BitsTransfer -Source \"{sourceFile}\" -Destination \"{file.TempName}\" -DisplayName \"正在复制文件\" -Description \"{sourceFile} => {file.TempName}\"");
                             ps1Script.AppendLine($"}}");
                             break;
                         default:
