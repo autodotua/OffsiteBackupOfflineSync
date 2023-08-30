@@ -58,7 +58,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("修改")).Count() == Count * 2);
 
                     string patchDir = Path.Combine(dir, "patch");
-                    u2.Export(patchDir, false);
+                    u2.Export(patchDir, ExportMode.Copy);
 
                     Step3Utility u3 = new Step3Utility();
                     u3.Analyze(patchDir);

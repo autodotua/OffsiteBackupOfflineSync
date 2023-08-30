@@ -333,6 +333,8 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock
                 VerticalAlignment="Center"
@@ -345,19 +347,46 @@
                 IsIndeterminate="{Binding ProgressIndeterminate}"
                 Maximum="{Binding ProgressMax}"
                 Value="{Binding Progress}" />
-            <CheckBox
+            <TextBlock
                 Grid.Column="4"
                 VerticalAlignment="Center"
-                Content="创建硬链接而不是复制"
-                IsChecked="{Binding HardLink}" />
-            <Button
+                Text="导出方式：" />
+            <ComboBox
                 Grid.Column="6"
+                Width="128"
+                ItemsSource="{Binding ExportModes}"
+                SelectedItem="{Binding ExportMode}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Text="{Binding ., Converter={StaticResource DescriptionConverter}}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+                <ComboBox.ToolTip>
+                    <TextBlock>
+                        <Run FontWeight="Bold">复制：</Run>
+                        <Run>将文件复制到导出目录中</Run>
+                        <LineBreak />
+                        <Run FontWeight="Bold">硬链接：</Run>
+                        <Run>若本地目录与导出目录位于同一个本地的NTFS分区，可以创建链接来快速导出</Run>
+                        <LineBreak />
+                        <Run FontWeight="Bold">硬链接优先：</Run>
+                        <Run>优先使用硬链接，若失败，则复制</Run>
+                        <LineBreak />
+                        <Run FontWeight="Bold">脚本：</Run>
+                        <Run>将会在导出目录生成.bat和.ps1脚本，将执行脚本可以将需要的文件复制到脚本所在目录</Run>
+                    </TextBlock>
+                </ComboBox.ToolTip>
+            </ComboBox>
+            <Button
+                Grid.Column="8"
                 Width="128"
                 Click="StopButton_Click"
                 Content="停止"
                 IsEnabled="{Binding CanStop}" />
             <Button
-                Grid.Column="8"
+                Grid.Column="10"
                 Width="128"
                 Click="ExportButton_Click"
                 Content="3. 生成补丁"

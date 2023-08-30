@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
 using OffsiteBackupOfflineSync.WPF.UI;
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -20,6 +21,8 @@ namespace OffsiteBackupOfflineSync.UI
     public partial class Step2 : UserControl
     {
         private readonly Step2Utility u = new Step2Utility();
+
+        Step1Model step1;
 
         public Step2(Step2ViewModel viewModel)
         {
@@ -86,7 +89,7 @@ namespace OffsiteBackupOfflineSync.UI
                 bool allOk = true;
                 await Task.Run(() =>
                 {
-                    allOk = u.Export(ViewModel.PatchDir, ViewModel.HardLink);
+                    allOk = u.Export(ViewModel.PatchDir, ViewModel.ExportMode);
                 });
                 if (!allOk)
                 {
@@ -106,7 +109,6 @@ namespace OffsiteBackupOfflineSync.UI
             }
 
         }
-        Step1Model step1;
         private async void MatchDirsButton_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(ViewModel.OffsiteSnapshot))
@@ -212,13 +214,13 @@ namespace OffsiteBackupOfflineSync.UI
     {
         private string blackList = "Thumbs.db";
         private bool blackListUseRegex;
-        private bool hardLink;
+        private ExportMode exportMode = ExportMode.Copy;
         private string localDir;
         private ObservableCollection<LocalAndOffsiteDir> matchingDirs;
         private bool moveFileIgnoreName = true;
         private string offsiteSnapshot;
-
         private string patchDir;
+
         public string BlackList
         {
             get => blackList;
@@ -231,11 +233,13 @@ namespace OffsiteBackupOfflineSync.UI
             set => this.SetValueAndNotify(ref blackListUseRegex, value, nameof(BlackListUseRegex));
         }
 
-        public bool HardLink
+        public ExportMode ExportMode
         {
-            get => hardLink;
-            set => this.SetValueAndNotify(ref hardLink, value, nameof(HardLink));
+            get => exportMode;
+            set => this.SetValueAndNotify(ref exportMode, value, nameof(ExportMode));
         }
+
+        public IEnumerable ExportModes => Enum.GetValues<ExportMode>();
 
         public string LocalDir
         {

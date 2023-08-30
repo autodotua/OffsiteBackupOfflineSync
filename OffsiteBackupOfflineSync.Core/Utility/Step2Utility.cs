@@ -4,6 +4,7 @@ using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography;
@@ -41,7 +42,7 @@ namespace OffsiteBackupOfflineSync.Utility
             return matchingDirs;
         }
 
-        public bool Export(string outputDir, bool hardLink)
+        public bool Export(string outputDir, ExportMode exportMode)
         {
             bool allOk = true;
             stopping = false;
@@ -53,6 +54,9 @@ namespace OffsiteBackupOfflineSync.Utility
             Dictionary<string, string> offsiteTopDir2LocalDir = localAndOffsiteDirs.ToDictionary(p => p.OffsiteDir, p => p.LocalDir);
             long totalLength = files.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
+            StringBuilder batScript = new StringBuilder();
+            StringBuilder ps1Script = new StringBuilder();
+            batScript.AppendLine("@echo off");
             using var sha256 = SHA256.Create();
             foreach (var file in files)
             {
@@ -66,13 +70,15 @@ namespace OffsiteBackupOfflineSync.Utility
                 if (file.UpdateType is not (FileUpdateType.Delete or FileUpdateType.Move))
                 {
                     file.TempName = GetTempFileName(file, sha256);
-                    InvokeMessageReceivedEvent($"正在复制：{file.Path}");
+                    InvokeMessageReceivedEvent($"正在处理：{file.Path}");
                     string sourceFile = Path.Combine(offsiteTopDir2LocalDir[file.TopDirectory], file.Path);
                     string destFile = Path.Combine(outputDir, file.TempName);
                     if (File.Exists(destFile))
                     {
                         FileInfo existingFile = new FileInfo(destFile);
-                        if (existingFile.Length == file.Length && existingFile.LastWriteTime == file.LastWriteTime)
+                        if (existingFile.Length == file.Length 
+                            && existingFile.LastWriteTime == file.LastWriteTime
+                            && exportMode!=ExportMode.Script)
                         {
                             InvokeProgressReceivedEvent(length += file.Length, totalLength);
                             continue;
@@ -89,52 +95,99 @@ namespace OffsiteBackupOfflineSync.Utility
                             }
                         }
                     }
-                    if (hardLink)
+                    switch (exportMode)
                     {
-                        try
-                        {
-                            CreateHardLink(destFile, sourceFile);
-                        }
-                        catch (IOException ex)
-                        {
-                            throw;
-                        }
-                        catch (Exception ex)
-                        {
-                            allOk = false;
-                            file.Message = ex.Message;
-                        }
-                    }
-                    else
-                    {
-                        int tryCount = 10;
-
-                        while (--tryCount > 0)
-                        {
-                            if (tryCount < 9 && File.Exists(destFile))
-                            {
-                                File.Delete(destFile);
-                            }
+                        case ExportMode.PreferHardLink:
                             try
                             {
-                                File.Copy(sourceFile, destFile);
-                                tryCount = 0;
+                                CreateHardLink(destFile, sourceFile);
                             }
-                            catch (IOException ex)
+                            catch (IOException)
                             {
-                                Debug.WriteLine($"复制文件{sourceFile}到{destFile}失败：{ex.Message}，剩余{tryCount}次重试");
-                                if (tryCount == 0)
-                                {
-                                    allOk = false;
-                                    file.Message = ex.Message;
-                                }
-                                Thread.Sleep(1000);
+                                goto copy;
                             }
-                        }
+                            catch (Exception ex)
+                            {
+                                allOk = false;
+                                file.Message = ex.Message;
+                            }
+                            break;
+                        case ExportMode.Copy:
+                        copy:
+                            int tryCount = 10;
+
+                            while (--tryCount > 0)
+                            {
+                                if (tryCount < 9 && File.Exists(destFile))
+                                {
+                                    File.Delete(destFile);
+                                }
+                                try
+                                {
+                                    File.Copy(sourceFile, destFile);
+                                    tryCount = 0;
+                                }
+                                catch (IOException ex)
+                                {
+                                    Debug.WriteLine($"复制文件{sourceFile}到{destFile}失败：{ex.Message}，剩余{tryCount}次重试");
+                                    if (tryCount == 0)
+                                    {
+                                        allOk = false;
+                                        file.Message = ex.Message;
+                                    }
+                                    Thread.Sleep(1000);
+                                }
+                            }
+                            break;
+                        case ExportMode.HardLink:
+                            try
+                            {
+                                CreateHardLink(destFile, sourceFile);
+                            }
+                            catch (IOException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                allOk = false;
+                                file.Message = ex.Message;
+                            }
+                            break;
+                        case ExportMode.Script:
+                            batScript.AppendLine($"if exist \"{file.TempName}\" (");
+                            batScript.AppendLine($"echo 文件 {sourceFile} 已存在");
+                            batScript.AppendLine($") else (");
+                            batScript.AppendLine($"echo 正在复制 {sourceFile}");
+                            batScript.AppendLine($"copy \"{sourceFile}\" \"{file.TempName}\"");
+                            batScript.AppendLine($")");
+
+                            ps1Script.AppendLine($"if ([System.IO.File]::Exists(\"{file.TempName}\")){{");
+                            ps1Script.AppendLine($"\"文件 {sourceFile} 已存在\"");
+                            ps1Script.AppendLine($"}}else{{");
+                            ps1Script.AppendLine($"\"正在复制 {sourceFile}\"");
+                            ps1Script.AppendLine($"cp \"{sourceFile}\" \"{file.TempName}\"");
+                            ps1Script.AppendLine($"}}");
+                            break;
+                        default:
+                            break;
                     }
+
                     InvokeProgressReceivedEvent(length += file.Length, totalLength);
                 }
                 file.Complete = true;
+            }
+
+            if (exportMode == ExportMode.Script)
+            {
+                batScript.AppendLine("echo 复制完成");
+                batScript.AppendLine("pause");
+                var encoding = Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
+                File.WriteAllText(Path.Combine(outputDir, "CopyToHere.bat"), batScript.ToString(), encoding);
+
+                ps1Script.AppendLine("\"复制完成\"");
+                ps1Script.AppendLine("pause");
+                File.WriteAllText(Path.Combine(outputDir, "CopyToHere.ps1"), ps1Script.ToString(), Encoding.UTF8);
             }
 
             Step2Model model = new Step2Model()
@@ -317,7 +370,7 @@ namespace OffsiteBackupOfflineSync.Utility
         [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
 
-        private void CreateHardLink(string link, string source)
+        private static void CreateHardLink(string link, string source)
         {
             if (!File.Exists(source))
             {
@@ -341,7 +394,7 @@ namespace OffsiteBackupOfflineSync.Utility
             }
         }
 
-        private string GetTempFileName(SyncFile file, SHA256 sha256)
+        private static string GetTempFileName(SyncFile file, SHA256 sha256)
         {
             string featureCode = $"{file.TopDirectory}{file.Path}{file.LastWriteTime}{file.Length}";
 
