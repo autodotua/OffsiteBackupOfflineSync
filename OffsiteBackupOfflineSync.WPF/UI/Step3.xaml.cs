@@ -95,7 +95,7 @@ namespace OffsiteBackupOfflineSync.UI
                 ViewModel.UpdateStatus(StatusType.Processing);
                 await Task.Run(() =>
                 {
-                    u.Update(ViewModel.DeleteMode);
+                    u.Update(ViewModel.DeleteMode,Configs.Instance.DeleteDirName);
                     u.AnalyzeEmptyDirectories();
                 });
 
@@ -105,7 +105,7 @@ namespace OffsiteBackupOfflineSync.UI
                         $"有{u.DeletingDirectories.Count}个已不存在于本地的空目录，是否删除？",
                         string.Join(Environment.NewLine, u.DeletingDirectories.Select(p => Path.Combine(p.TopDirectory, p.Path)))))
                     {
-                        u.DeleteEmptyDirectories(ViewModel.DeleteMode);
+                        u.DeleteEmptyDirectories(ViewModel.DeleteMode, Configs.Instance.DeleteDirName);
                     }
                 }
             }

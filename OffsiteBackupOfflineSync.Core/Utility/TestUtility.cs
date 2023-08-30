@@ -62,9 +62,9 @@ namespace OffsiteBackupOfflineSync.Utility
 
                     Step3Utility u3 = new Step3Utility();
                     u3.Analyze(patchDir);
-                    u3.Update(DeleteMode.Delete);
+                    u3.Update(DeleteMode.Delete, null);
                     u3.AnalyzeEmptyDirectories();
-                    u3.DeleteEmptyDirectories(DeleteMode.Delete);
+                    u3.DeleteEmptyDirectories(DeleteMode.Delete,null);
 
                     var localFiles = Directory.EnumerateFiles(localDir, "*", SearchOption.AllDirectories)
                         .Select(p => Path.GetRelativePath(localDir, p))
