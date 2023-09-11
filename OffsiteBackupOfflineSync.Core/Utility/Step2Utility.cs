@@ -157,17 +157,18 @@ namespace OffsiteBackupOfflineSync.Utility
                             break;
                         case ExportMode.Script:
                             batScript.AppendLine($"if exist \"{file.TempName}\" (");
-                            batScript.AppendLine($"echo 文件 {sourceFile} 已存在");
+                            batScript.AppendLine($"echo \"文件 {sourceFile} 已存在\"");
                             batScript.AppendLine($") else (");
-                            batScript.AppendLine($"echo 正在复制 {sourceFile}");
+                            batScript.AppendLine($"echo 正在复制 \"{sourceFile}\"");
                             batScript.AppendLine($"copy \"{sourceFile}\" \"{file.TempName}\"");
                             batScript.AppendLine($")");
 
+                            string ps1SourceName = sourceFile.Replace("'", "''");
                             ps1Script.AppendLine($"if ([System.IO.File]::Exists(\"{file.TempName}\")){{");
-                            ps1Script.AppendLine($"\"文件 {sourceFile} 已存在\"");
+                            ps1Script.AppendLine($"'文件 {ps1SourceName} 已存在'");
                             ps1Script.AppendLine($"}}else{{");
-                            ps1Script.AppendLine($"\"正在复制 {sourceFile}\"");
-                            ps1Script.AppendLine($"Start-BitsTransfer -Source \"{sourceFile}\" -Destination \"{file.TempName}\" -DisplayName \"正在复制文件\" -Description \"{sourceFile} => {file.TempName}\"");
+                            ps1Script.AppendLine($"'正在复制 {sourceFile}'");
+                            ps1Script.AppendLine($"Start-BitsTransfer -Source '{sourceFile}' -Destination \"{file.TempName}\" -DisplayName \"正在复制文件\" -Description \"{sourceFile} => {file.TempName}\"");
                             ps1Script.AppendLine($"}}");
                             break;
                         default:
