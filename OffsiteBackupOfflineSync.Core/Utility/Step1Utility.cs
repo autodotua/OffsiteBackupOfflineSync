@@ -20,6 +20,15 @@ namespace OffsiteBackupOfflineSync.Utility
             stopping = false;
             index = 0;
             List<SyncFile> syncFiles = new List<SyncFile>();
+            var groups = dirs.GroupBy(p => Path.GetFileName(p));
+            foreach (var group in groups)
+            {
+                if(group.Count()>1)
+                {
+                    throw new ArgumentException("存在重复的顶级目录名：" + group.Key);
+                }
+            }
+
             foreach (var dir in dirs)
             {
                 foreach (var file in new DirectoryInfo(dir).EnumerateFiles("*", SearchOption.AllDirectories))

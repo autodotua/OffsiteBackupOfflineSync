@@ -77,9 +77,9 @@ namespace OffsiteBackupOfflineSync.Utility
                     if (File.Exists(destFile))
                     {
                         FileInfo existingFile = new FileInfo(destFile);
-                        if (existingFile.Length == file.Length 
+                        if (existingFile.Length == file.Length
                             && existingFile.LastWriteTime == file.LastWriteTime
-                            && exportMode!=ExportMode.Script)
+                            && exportMode != ExportMode.Script)
                         {
                             InvokeProgressReceivedEvent(length += file.Length, totalLength);
                             continue;
@@ -244,6 +244,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 var offsiteDir = new DirectoryInfo(localAndOffsiteDir.OffsiteDir);
                 InvokeMessageReceivedEvent($"正在查找：{localDir}");
                 var localFileList = localDir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
+                var localFilePathSet = localFileList.Select(p=>p.FullName).ToHashSet();
 
                 //从路径、文件名、时间、长度寻找本地文件的字典
                 string offsiteTopDirectory = localAndOffsiteDir.OffsiteDir;
@@ -266,7 +267,19 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                     string relativePath = Path.GetRelativePath(localDir.FullName, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
-                    localFiles.Add(Path.Combine(localDir.Name, relativePath), 0);
+#if DEBUG
+                    try
+                    {
+#endif
+                        localFiles.Add(Path.Combine(localDir.Name, relativePath), 0);
+
+#if DEBUG
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"加入localFiles失败，localDir={localDir}，relativePath={relativePath}，已经存在的Key={Path.Combine(localDir.Name, relativePath)}，Value={localFiles[Path.Combine(localDir.Name, relativePath)]}", ex);
+                    }
+#endif
                     if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
                     {
                         continue;
@@ -305,7 +318,25 @@ namespace OffsiteBackupOfflineSync.Utility
                             (offsiteName2File.GetOrDefault(file.Name) ?? Enumerable.Empty<SyncFile>())
                              .Intersect(offsiteTime2File.GetOrDefault(file.LastWriteTime) ?? Enumerable.Empty<SyncFile>())
                              .Intersect(offsiteLength2File.GetOrDefault(file.Length) ?? Enumerable.Empty<SyncFile>());
-                        if (sameFiles.Count() == 1)//存在被移动或重命名的文件，并且为一对一关系
+                        bool move = false;
+                        if (sameFiles.Count() == 1)
+                        {
+                            //满足以下条件时，文件将被移动：
+                            //1、异地磁盘中，满足要求的相同文件仅找到一个
+                            //2、在找到的这个相同文件对应的本地的位置，不存在相同文件
+                            //      这一条时避免出现本地存在2个及以上的相同文件时，错误移动异地文件
+                            string localSameLocation = sameFiles.First().Path;
+                            localSameLocation = Path.Combine(localDir.FullName, localSameLocation);
+                            if (!localFilePathSet.Contains(localSameLocation))
+                            {
+                                move = true;
+                            }
+                            else
+                            {
+
+                            }
+                        }
+                        if (move) //存在被移动或重命名的文件，并且为一对一关系
                         {
                             var offsiteMovedFile = sameFiles.First();
                             var movedFile = new SyncFile()
