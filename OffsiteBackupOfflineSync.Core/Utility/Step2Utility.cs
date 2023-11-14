@@ -156,11 +156,12 @@ namespace OffsiteBackupOfflineSync.Utility
                             }
                             break;
                         case ExportMode.Script:
+                            string sourceFileWithReplaceSpecialChars = sourceFile.Replace("%", "%%");
                             batScript.AppendLine($"if exist \"{file.TempName}\" (");
-                            batScript.AppendLine($"echo \"文件 {sourceFile} 已存在\"");
+                            batScript.AppendLine($"echo \"文件 {sourceFileWithReplaceSpecialChars} 已存在\"");
                             batScript.AppendLine($") else (");
-                            batScript.AppendLine($"echo 正在复制 \"{sourceFile}\"");
-                            batScript.AppendLine($"copy \"{sourceFile}\" \"{file.TempName}\"");
+                            batScript.AppendLine($"echo 正在复制 \"{sourceFileWithReplaceSpecialChars}\"");
+                            batScript.AppendLine($"copy \"{sourceFileWithReplaceSpecialChars}\" \"{file.TempName}\"");
                             batScript.AppendLine($")");
 
                             string ps1SourceName = sourceFile.Replace("'", "''");
