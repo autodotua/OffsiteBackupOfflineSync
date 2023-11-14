@@ -168,7 +168,8 @@ namespace OffsiteBackupOfflineSync.Utility
                             ps1Script.AppendLine($"'文件 {ps1SourceName} 已存在'");
                             ps1Script.AppendLine($"}}else{{");
                             ps1Script.AppendLine($"'正在复制 {sourceFile}'");
-                            ps1Script.AppendLine($"Start-BitsTransfer -Source '{sourceFile}' -Destination \"{file.TempName}\" -DisplayName \"正在复制文件\" -Description \"{sourceFile} => {file.TempName}\"");
+                            string sourceFileWithNoWildcards = sourceFile.Replace("[", "`[").Replace("]", "`]").Replace("?", "`?").Replace("?", "`?");
+                            ps1Script.AppendLine($"Start-BitsTransfer -Source '{sourceFileWithNoWildcards}' -Destination '{file.TempName}' -DisplayName '正在复制文件' -Description '{sourceFile} => {file.TempName}'");
                             ps1Script.AppendLine($"}}");
                             break;
                         default:
