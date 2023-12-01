@@ -20,13 +20,15 @@ namespace OffsiteBackupOfflineSync
         public const string DateTimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-        #if (DEBUG)
+#if (DEBUG)
 
-        #else
+#else
                     var catcher = WPFUnhandledExceptionCatcher.RegistAll();
                     catcher.UnhandledExceptionCatched += UnhandledException_UnhandledExceptionCatched;
 
-        #endif
+#endif
+
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
         }
 
         private void UnhandledException_UnhandledExceptionCatched(object sender, FzLib.Program.Runtime.UnhandledExceptionEventArgs e)

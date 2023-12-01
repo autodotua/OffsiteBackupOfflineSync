@@ -58,13 +58,13 @@ namespace OffsiteBackupOfflineSync.Utility
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("修改")).Count() == Count * 2);
 
                     string patchDir = Path.Combine(dir, "patch");
-                    u2.Export(patchDir, false);
+                    u2.Export(patchDir, ExportMode.Copy);
 
                     Step3Utility u3 = new Step3Utility();
                     u3.Analyze(patchDir);
-                    u3.Update(DeleteMode.Delete);
+                    u3.Update(DeleteMode.Delete, null);
                     u3.AnalyzeEmptyDirectories();
-                    u3.DeleteEmptyDirectories(DeleteMode.Delete);
+                    u3.DeleteEmptyDirectories(DeleteMode.Delete,null);
 
                     var localFiles = Directory.EnumerateFiles(localDir, "*", SearchOption.AllDirectories)
                         .Select(p => Path.GetRelativePath(localDir, p))

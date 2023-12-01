@@ -7,7 +7,6 @@ namespace OffsiteBackupOfflineSync.Utility
 {
     public class Step3Utility : UtilityBase
     {
-        public const string DeleteDirName = "异地备份离线同步-删除的文件";
         private readonly DateTime createTime = DateTime.Now;
         private string patchDir;
         public List<SyncFile> DeletingDirectories { get; private set; }
@@ -199,15 +198,15 @@ namespace OffsiteBackupOfflineSync.Utility
             }
         }
 
-        public void DeleteEmptyDirectories(DeleteMode deleteMode)
+        public void DeleteEmptyDirectories(DeleteMode deleteMode, string deleteDirName)
         {
             foreach (var dir in DeletingDirectories)
             {
-                Delete(dir.TopDirectory, dir.Path, deleteMode);
+                Delete(dir.TopDirectory, dir.Path, deleteMode, deleteDirName);
             }
         }
 
-        public void Update(DeleteMode deleteMode)
+        public void Update(DeleteMode deleteMode, string deleteDirName)
         {
             stopping = false;
             var updateFiles = UpdateFiles.Where(p => p.Checked).ToList();
@@ -246,7 +245,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         case FileUpdateType.Add:
                             if (File.Exists(target))
                             {
-                                Delete(file.TopDirectory, target, deleteMode);
+                                Delete(file.TopDirectory, target, deleteMode, deleteDirName);
                             }
                             File.Copy(patch, target);
                             File.SetLastWriteTime(target, file.LastWriteTime);
@@ -255,7 +254,7 @@ namespace OffsiteBackupOfflineSync.Utility
                         case FileUpdateType.Modify:
                             if (File.Exists(target))
                             {
-                                Delete(file.TopDirectory, target, deleteMode);
+                                Delete(file.TopDirectory, target, deleteMode, deleteDirName);
                             }
                             File.Copy(patch, target);
                             File.SetLastWriteTime(target, file.LastWriteTime);
@@ -266,7 +265,7 @@ namespace OffsiteBackupOfflineSync.Utility
                             {
                                 throw new Exception("应当为待删除文件，但文件不存在");
                             }
-                            Delete(file.TopDirectory, target, deleteMode);
+                            Delete(file.TopDirectory, target, deleteMode, deleteDirName);
                             break;
 
                         case FileUpdateType.Move:
@@ -298,7 +297,7 @@ namespace OffsiteBackupOfflineSync.Utility
             return attr.HasFlag(FileAttributes.Directory);
         }
 
-        private void Delete(string rootDir, string filePath, DeleteMode deleteMode)
+        private void Delete(string rootDir, string filePath, DeleteMode deleteMode, string deleteDirName)
         {
             Debug.Assert(IsDirectory(filePath) || true);
             if (!filePath.StartsWith(rootDir))
@@ -322,7 +321,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     break;
                 case DeleteMode.MoveToDeletedFolder:
                     string relative = Path.GetRelativePath(rootDir, filePath);
-                    string deletedFolder = Path.Combine(Path.GetPathRoot(filePath), DeleteDirName, createTime.ToString("yyyyMMdd-HHmmss"));
+                    string deletedFolder = Path.Combine(Path.GetPathRoot(filePath), deleteDirName, createTime.ToString("yyyyMMdd-HHmmss"), rootDir.Replace(":\\","#").Replace('\\','#').Replace('/','#'));
                     string target = Path.Combine(deletedFolder, relative);
                     string dir = Path.GetDirectoryName(target);
                     if (!Directory.Exists(dir))

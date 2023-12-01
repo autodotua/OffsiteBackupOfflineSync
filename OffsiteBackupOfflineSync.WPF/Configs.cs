@@ -41,7 +41,8 @@ namespace OffsiteBackupOfflineSync
                 return instance;
             }
         }
-        public string CurrentConfigName { get; set; } = "默认";
+
+        public Dictionary<string, SingleConfig> ConfigCollection { get; set; } = new Dictionary<string, SingleConfig>();
         public SingleConfig CurrentConfig
         {
             get
@@ -57,8 +58,9 @@ namespace OffsiteBackupOfflineSync
                 }
             }
         }
-        public Dictionary<string, SingleConfig> ConfigCollection { get; set; } = new Dictionary<string, SingleConfig>();
 
+        public string CurrentConfigName { get; set; } = "默认";
+        public string DeleteDirName { get; set; } = "异地备份离线同步-删除的文件";
         public void Save(string path)
         {
             string dir = Path.GetDirectoryName(path);
@@ -84,10 +86,10 @@ namespace OffsiteBackupOfflineSync
 
     public class SingleConfig
     {
+        public CloneFileTreeViewModel CloneFileTree { get; set; } = new CloneFileTreeViewModel();
+        public FilesGoHomeViewModel FilesGoHome { get; set; } = new FilesGoHomeViewModel();
         public Step1ViewModel Step1 { get; set; } = new Step1ViewModel();
         public Step2ViewModel Step2 { get; set; } = new Step2ViewModel();
         public Step3ViewModel Step3 { get; set; } = new Step3ViewModel();
-        public CloneFileTreeViewModel CloneFileTree { get; set; } = new CloneFileTreeViewModel();
-        public FilesGoHomeViewModel FilesGoHome { get; set; } = new FilesGoHomeViewModel();
     }
 }

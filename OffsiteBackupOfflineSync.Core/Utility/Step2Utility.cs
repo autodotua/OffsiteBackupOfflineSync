@@ -4,6 +4,7 @@ using OffsiteBackupOfflineSync.Model;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography;
@@ -41,7 +42,7 @@ namespace OffsiteBackupOfflineSync.Utility
             return matchingDirs;
         }
 
-        public bool Export(string outputDir, bool hardLink)
+        public bool Export(string outputDir, ExportMode exportMode)
         {
             bool allOk = true;
             stopping = false;
@@ -53,6 +54,10 @@ namespace OffsiteBackupOfflineSync.Utility
             Dictionary<string, string> offsiteTopDir2LocalDir = localAndOffsiteDirs.ToDictionary(p => p.OffsiteDir, p => p.LocalDir);
             long totalLength = files.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
             long length = 0;
+            StringBuilder batScript = new StringBuilder();
+            StringBuilder ps1Script = new StringBuilder();
+            batScript.AppendLine("@echo off");
+            ps1Script.AppendLine("Import-Module BitsTransfer");
             using var sha256 = SHA256.Create();
             foreach (var file in files)
             {
@@ -66,13 +71,15 @@ namespace OffsiteBackupOfflineSync.Utility
                 if (file.UpdateType is not (FileUpdateType.Delete or FileUpdateType.Move))
                 {
                     file.TempName = GetTempFileName(file, sha256);
-                    InvokeMessageReceivedEvent($"正在复制：{file.Path}");
+                    InvokeMessageReceivedEvent($"正在处理：{file.Path}");
                     string sourceFile = Path.Combine(offsiteTopDir2LocalDir[file.TopDirectory], file.Path);
                     string destFile = Path.Combine(outputDir, file.TempName);
                     if (File.Exists(destFile))
                     {
                         FileInfo existingFile = new FileInfo(destFile);
-                        if (existingFile.Length == file.Length && existingFile.LastWriteTime == file.LastWriteTime)
+                        if (existingFile.Length == file.Length
+                            && existingFile.LastWriteTime == file.LastWriteTime
+                            && exportMode != ExportMode.Script)
                         {
                             InvokeProgressReceivedEvent(length += file.Length, totalLength);
                             continue;
@@ -89,52 +96,102 @@ namespace OffsiteBackupOfflineSync.Utility
                             }
                         }
                     }
-                    if (hardLink)
+                    switch (exportMode)
                     {
-                        try
-                        {
-                            CreateHardLink(destFile, sourceFile);
-                        }
-                        catch (IOException ex)
-                        {
-                            throw;
-                        }
-                        catch (Exception ex)
-                        {
-                            allOk = false;
-                            file.Message = ex.Message;
-                        }
-                    }
-                    else
-                    {
-                        int tryCount = 10;
-
-                        while (--tryCount > 0)
-                        {
-                            if (tryCount < 9 && File.Exists(destFile))
-                            {
-                                File.Delete(destFile);
-                            }
+                        case ExportMode.PreferHardLink:
                             try
                             {
-                                File.Copy(sourceFile, destFile);
-                                tryCount = 0;
+                                CreateHardLink(destFile, sourceFile);
                             }
-                            catch (IOException ex)
+                            catch (IOException)
                             {
-                                Debug.WriteLine($"复制文件{sourceFile}到{destFile}失败：{ex.Message}，剩余{tryCount}次重试");
-                                if (tryCount == 0)
-                                {
-                                    allOk = false;
-                                    file.Message = ex.Message;
-                                }
-                                Thread.Sleep(1000);
+                                goto copy;
                             }
-                        }
+                            catch (Exception ex)
+                            {
+                                allOk = false;
+                                file.Message = ex.Message;
+                            }
+                            break;
+                        case ExportMode.Copy:
+                        copy:
+                            int tryCount = 10;
+
+                            while (--tryCount > 0)
+                            {
+                                if (tryCount < 9 && File.Exists(destFile))
+                                {
+                                    File.Delete(destFile);
+                                }
+                                try
+                                {
+                                    File.Copy(sourceFile, destFile);
+                                    tryCount = 0;
+                                }
+                                catch (IOException ex)
+                                {
+                                    Debug.WriteLine($"复制文件{sourceFile}到{destFile}失败：{ex.Message}，剩余{tryCount}次重试");
+                                    if (tryCount == 0)
+                                    {
+                                        allOk = false;
+                                        file.Message = ex.Message;
+                                    }
+                                    Thread.Sleep(1000);
+                                }
+                            }
+                            break;
+                        case ExportMode.HardLink:
+                            try
+                            {
+                                CreateHardLink(destFile, sourceFile);
+                            }
+                            catch (IOException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                allOk = false;
+                                file.Message = ex.Message;
+                            }
+                            break;
+                        case ExportMode.Script:
+                            string sourceFileWithReplaceSpecialChars = sourceFile.Replace("%", "%%");
+                            batScript.AppendLine($"if exist \"{file.TempName}\" (");
+                            batScript.AppendLine($"echo \"文件 {sourceFileWithReplaceSpecialChars} 已存在\"");
+                            batScript.AppendLine($") else (");
+                            batScript.AppendLine($"echo 正在复制 \"{sourceFileWithReplaceSpecialChars}\"");
+                            batScript.AppendLine($"copy \"{sourceFileWithReplaceSpecialChars}\" \"{file.TempName}\"");
+                            batScript.AppendLine($")");
+
+                            string ps1SourceName = sourceFile.Replace("'", "''");
+                            ps1Script.AppendLine($"if ([System.IO.File]::Exists(\"{file.TempName}\")){{");
+                            ps1Script.AppendLine($"'文件 {ps1SourceName} 已存在'");
+                            ps1Script.AppendLine($"}}else{{");
+                            ps1Script.AppendLine($"'正在复制 {sourceFile}'");
+                            string sourceFileWithNoWildcards = sourceFile.Replace("`", "``").Replace("[", "`[").Replace("]", "`]").Replace("?", "`?").Replace("?", "`?");
+                            ps1Script.AppendLine($"Start-BitsTransfer -Source '{sourceFileWithNoWildcards}' -Destination '{file.TempName}' -DisplayName '正在复制文件' -Description '{sourceFile} => {file.TempName}'");
+                            ps1Script.AppendLine($"}}");
+                            break;
+                        default:
+                            break;
                     }
+
                     InvokeProgressReceivedEvent(length += file.Length, totalLength);
                 }
                 file.Complete = true;
+            }
+
+            if (exportMode == ExportMode.Script)
+            {
+                batScript.AppendLine("echo 复制完成");
+                batScript.AppendLine("pause");
+                var encoding = Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
+                File.WriteAllText(Path.Combine(outputDir, "CopyToHere.bat"), batScript.ToString(), encoding);
+
+                ps1Script.AppendLine("\"复制完成\"");
+                ps1Script.AppendLine("pause");
+                File.WriteAllText(Path.Combine(outputDir, "CopyToHere.ps1"), ps1Script.ToString(), Encoding.UTF8);
             }
 
             Step2Model model = new Step2Model()
@@ -189,6 +246,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 var offsiteDir = new DirectoryInfo(localAndOffsiteDir.OffsiteDir);
                 InvokeMessageReceivedEvent($"正在查找：{localDir}");
                 var localFileList = localDir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
+                var localFilePathSet = localFileList.Select(p => p.FullName).ToHashSet();
 
                 //从路径、文件名、时间、长度寻找本地文件的字典
                 string offsiteTopDirectory = localAndOffsiteDir.OffsiteDir;
@@ -211,7 +269,19 @@ namespace OffsiteBackupOfflineSync.Utility
                     }
                     string relativePath = Path.GetRelativePath(localDir.FullName, file.FullName);
                     InvokeMessageReceivedEvent($"正在比对第 {++index} 个文件：{relativePath}");
-                    localFiles.Add(Path.Combine(localDir.Name, relativePath), 0);
+#if DEBUG
+                    try
+                    {
+#endif
+                        localFiles.Add(Path.Combine(localDir.Name, relativePath), 0);
+
+#if DEBUG
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"加入localFiles失败，localDir={localDir}，relativePath={relativePath}，已经存在的Key={Path.Combine(localDir.Name, relativePath)}，Value={localFiles[Path.Combine(localDir.Name, relativePath)]}", ex);
+                    }
+#endif
                     if (IsInBlackList(file.Name, file.FullName, blacks, blackRegexs, blackListUseRegex))
                     {
                         continue;
@@ -250,7 +320,25 @@ namespace OffsiteBackupOfflineSync.Utility
                             (offsiteName2File.GetOrDefault(file.Name) ?? Enumerable.Empty<SyncFile>())
                              .Intersect(offsiteTime2File.GetOrDefault(file.LastWriteTime) ?? Enumerable.Empty<SyncFile>())
                              .Intersect(offsiteLength2File.GetOrDefault(file.Length) ?? Enumerable.Empty<SyncFile>());
-                        if (sameFiles.Count() == 1)//存在被移动或重命名的文件，并且为一对一关系
+                        bool move = false;
+                        if (sameFiles.Count() == 1)
+                        {
+                            //满足以下条件时，文件将被移动：
+                            //1、异地磁盘中，满足要求的相同文件仅找到一个
+                            //2、在找到的这个相同文件对应的本地的位置，不存在相同文件
+                            //      这一条时避免出现本地存在2个及以上的相同文件时，错误移动异地文件
+                            string localSameLocation = sameFiles.First().Path;
+                            localSameLocation = Path.Combine(localDir.FullName, localSameLocation);
+                            if (!localFilePathSet.Contains(localSameLocation))
+                            {
+                                move = true;
+                            }
+                            else
+                            {
+
+                            }
+                        }
+                        if (move) //存在被移动或重命名的文件，并且为一对一关系
                         {
                             var offsiteMovedFile = sameFiles.First();
                             var movedFile = new SyncFile()
@@ -317,7 +405,7 @@ namespace OffsiteBackupOfflineSync.Utility
         [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
 
-        private void CreateHardLink(string link, string source)
+        private static void CreateHardLink(string link, string source)
         {
             if (!File.Exists(source))
             {
@@ -341,7 +429,7 @@ namespace OffsiteBackupOfflineSync.Utility
             }
         }
 
-        private string GetTempFileName(SyncFile file, SHA256 sha256)
+        private static string GetTempFileName(SyncFile file, SHA256 sha256)
         {
             string featureCode = $"{file.TopDirectory}{file.Path}{file.LastWriteTime}{file.Length}";
 
