@@ -169,7 +169,7 @@ namespace OffsiteBackupOfflineSync.Utility
                             ps1Script.AppendLine($"'文件 {ps1SourceName} 已存在'");
                             ps1Script.AppendLine($"}}else{{");
                             ps1Script.AppendLine($"'正在复制 {sourceFile}'");
-                            string sourceFileWithNoWildcards = sourceFile.Replace("[", "`[").Replace("]", "`]").Replace("?", "`?").Replace("?", "`?");
+                            string sourceFileWithNoWildcards = sourceFile.Replace("`", "``").Replace("[", "`[").Replace("]", "`]").Replace("?", "`?").Replace("?", "`?");
                             ps1Script.AppendLine($"Start-BitsTransfer -Source '{sourceFileWithNoWildcards}' -Destination '{file.TempName}' -DisplayName '正在复制文件' -Description '{sourceFile} => {file.TempName}'");
                             ps1Script.AppendLine($"}}");
                             break;
@@ -246,7 +246,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 var offsiteDir = new DirectoryInfo(localAndOffsiteDir.OffsiteDir);
                 InvokeMessageReceivedEvent($"正在查找：{localDir}");
                 var localFileList = localDir.EnumerateFiles("*", SearchOption.AllDirectories).ToList();
-                var localFilePathSet = localFileList.Select(p=>p.FullName).ToHashSet();
+                var localFilePathSet = localFileList.Select(p => p.FullName).ToHashSet();
 
                 //从路径、文件名、时间、长度寻找本地文件的字典
                 string offsiteTopDirectory = localAndOffsiteDir.OffsiteDir;
