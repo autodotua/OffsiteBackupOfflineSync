@@ -58,7 +58,8 @@
                         </ui:Flyout>-->
                         <ui:MenuFlyout>
                             <MenuItem
-                                Header="选择配置" Click="SelectConfigMenuItem_Click"
+                                Click="SelectConfigMenuItem_Click"
+                                Header="选择配置"
                                 ItemsSource="{Binding ConfigNames}">
                                 <MenuItem.ItemTemplate>
                                     <DataTemplate>
@@ -66,14 +67,19 @@
                                     </DataTemplate>
                                 </MenuItem.ItemTemplate>
                             </MenuItem>
-                            <MenuItem Header="新增配置"  Click="AddConfigMenuItem_Click"/>
-                            <MenuItem Header="删除当前配置" Click="RemoveConfigMenuItem_Click" />
+                            <MenuItem
+                                Click="AddConfigMenuItem_Click"
+                                Header="新增配置" />
+                            <MenuItem
+                                Click="RemoveConfigMenuItem_Click"
+                                Header="删除当前配置" />
                         </ui:MenuFlyout>
                     </ui:FlyoutService.Flyout>
                 </ui:TitleBarButton>
             </Grid>
         </Border>
-        <ui:NavigationView x:Name="nav"
+        <ui:NavigationView
+            x:Name="nav"
             Grid.Row="2"
             Header="{Binding NavigationViewHeader}"
             IsBackButtonVisible="Collapsed"

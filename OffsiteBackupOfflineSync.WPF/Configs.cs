@@ -38,11 +38,16 @@ namespace OffsiteBackupOfflineSync
 
                     }
                 }
+                if (instance.ConfigCollection.Count == 0)
+                {
+                    instance.ConfigCollection.Add(instance.CurrentConfigName, new SingleConfig());
+                }
                 return instance;
             }
         }
 
         public Dictionary<string, SingleConfig> ConfigCollection { get; set; } = new Dictionary<string, SingleConfig>();
+        [JsonIgnore]
         public SingleConfig CurrentConfig
         {
             get

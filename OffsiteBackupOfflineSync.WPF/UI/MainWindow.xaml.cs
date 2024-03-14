@@ -14,21 +14,10 @@ namespace OffsiteBackupOfflineSync.UI
     {
         private CloneFileTree cloneFileTree;
         private FilesGoHome filesGoHome;
+        PeriodicTimer saveConfigTimer = new PeriodicTimer(TimeSpan.FromSeconds(10));
         private Step1 step1;
         private Step2 step2;
         private Step3 step3;
-        PeriodicTimer saveConfigTimer = new PeriodicTimer(TimeSpan.FromSeconds(10));
-
-        private void LoadFromConfigs()
-        {
-            var config = Configs.Instance.CurrentConfig;
-            step1 = new Step1(config.Step1);
-            step2 = new Step2(config.Step2);
-            step3 = new Step3(config.Step3);
-            cloneFileTree = new CloneFileTree(config.CloneFileTree);
-            filesGoHome = new FilesGoHome(config.FilesGoHome);
-        }
-
         public MainWindow()
         {
             InitializeComponent();
@@ -41,6 +30,72 @@ namespace OffsiteBackupOfflineSync.UI
 
         private MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
 
+        private async void AddConfigMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            string name = await CommonDialog.ShowInputDialogAsync("请输入配置名", "新配置");
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                if (Configs.Instance.ConfigCollection.ContainsKey(name))
+                {
+                    await CommonDialog.ShowErrorDialogAsync("该配置名已存在");
+                    return;
+                }
+                Configs.Instance.ConfigCollection.Add(name, new SingleConfig());
+                ViewModel.NotifyConfigNamesChanged();
+                ChangeConfigName(name);
+                Configs.Instance.Save();
+            }
+        }
+
+        private void ChangeConfigName(string name)
+        {
+            Configs.Instance.CurrentConfigName = name;
+            ViewModel.CurrentConfigName = name;
+
+            LoadFromConfigs();
+            object currentContent = (nav.Content as Frame).Content;
+            if (currentContent is Step1)
+            {
+                frame.Navigate(step1);
+                ViewModel.NavigationViewHeader = "请使用异地磁盘完成这一步";
+            }
+            else if (currentContent is Step2)
+            {
+                frame.Navigate(step2);
+                ViewModel.NavigationViewHeader = "请使用本地磁盘完成这一步";
+            }
+            else if (currentContent is Step3)
+            {
+                frame.Navigate(step3);
+                ViewModel.NavigationViewHeader = "请使用异地磁盘完成这一步";
+            }
+            else if (currentContent is CloneFileTree)
+            {
+                frame.Navigate(cloneFileTree);
+                ViewModel.NavigationViewHeader = "创建保留文件大小和修改时间，但不占用空间的文件结构";
+            }
+            else if (currentContent is FilesGoHome)
+            {
+                frame.Navigate(filesGoHome);
+                ViewModel.NavigationViewHeader = "将源目录中的文件结构匹配为模板目录中的文件结构";
+            }
+            else
+            {
+                //Debug.Assert(false);
+            }
+
+            Configs.Instance.Save();
+        }
+
+        private void LoadFromConfigs()
+        {
+            var config = Configs.Instance.CurrentConfig;
+            step1 = new Step1(config.Step1);
+            step2 = new Step2(config.Step2);
+            step3 = new Step3(config.Step3);
+            cloneFileTree = new CloneFileTree(config.CloneFileTree);
+            filesGoHome = new FilesGoHome(config.FilesGoHome);
+        }
         private void NavigationView_SelectionChanged(ModernWpf.Controls.NavigationView sender, ModernWpf.Controls.NavigationViewSelectionChangedEventArgs args)
         {
             if (args.IsSettingsSelected)
@@ -86,12 +141,38 @@ namespace OffsiteBackupOfflineSync.UI
             SaveConfig();
         }
 
+        private async void RemoveConfigMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (Configs.Instance.ConfigCollection.Count == 1)
+            {
+                await CommonDialog.ShowErrorDialogAsync("必须保留至少一个配置");
+                return;
+            }
+
+            if (await CommonDialog.ShowYesNoDialogAsync("是否删除当前配置？"))
+            {
+                Configs.Instance.ConfigCollection.Remove(ViewModel.CurrentConfigName);
+                ViewModel.NotifyConfigNamesChanged();
+                ChangeConfigName(ViewModel.ConfigNames.First());
+                Configs.Instance.Save();
+            }
+        }
+
         private void SaveConfig()
         {
-            var config = Configs.Instance;
-
-            config.Save();
+            Configs.Instance.Save();
         }
+        private void SelectConfigMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            string name = (e.OriginalSource as System.Windows.Controls.MenuItem).DataContext as string;
+            if (name == Configs.Instance.CurrentConfigName)
+            {
+                return;
+            }
+            ChangeConfigName(name);
+
+        }
+
         private async Task StartSaveConfigTimer()
         {
             await Task.Delay(TimeSpan.FromSeconds(10));
@@ -105,106 +186,27 @@ namespace OffsiteBackupOfflineSync.UI
             saveConfigTimer.Dispose();
             SaveConfig();
         }
-
-        private void SelectConfigMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            string name = (e.OriginalSource as System.Windows.Controls.MenuItem).DataContext as string;
-            if (name == Configs.Instance.CurrentConfigName)
-            {
-                return;
-            }
-            ChangeConfigName(name);
-
-        }
-
-        private void ChangeConfigName(string name)
-        {
-            Configs.Instance.CurrentConfigName = name;
-            ViewModel.CurrentConfigName = name;
-
-            LoadFromConfigs();
-            object currentContent = (nav.Content as Frame).Content;
-            if (currentContent is Step1)
-            {
-                frame.Navigate(step1);
-                ViewModel.NavigationViewHeader = "请使用异地磁盘完成这一步";
-            }
-            else if (currentContent is Step2)
-            {
-                frame.Navigate(step2);
-                ViewModel.NavigationViewHeader = "请使用本地磁盘完成这一步";
-            }
-            else if (currentContent is Step3)
-            {
-                frame.Navigate(step3);
-                ViewModel.NavigationViewHeader = "请使用异地磁盘完成这一步";
-            }
-            else if (currentContent is CloneFileTree)
-            {
-                frame.Navigate(cloneFileTree);
-                ViewModel.NavigationViewHeader = "创建保留文件大小和修改时间，但不占用空间的文件结构";
-            }
-            else if (currentContent is FilesGoHome)
-            {
-                frame.Navigate(filesGoHome);
-                ViewModel.NavigationViewHeader = "将源目录中的文件结构匹配为模板目录中的文件结构";
-            }
-            else
-            {
-                //Debug.Assert(false);
-            }
-
-            Configs.Instance.Save();
-        }
-
-        private async void RemoveConfigMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            if (Configs.Instance.ConfigCollection.Count == 1)
-            {
-                await CommonDialog.ShowErrorDialogAsync("必须保留至少一个配置");
-                return;
-            }
-
-            if (await CommonDialog.ShowYesNoDialogAsync("是否删除当前配置？"))
-            {
-                Configs.Instance.ConfigCollection.Remove(ViewModel.CurrentConfigName);
-                ViewModel.ConfigNames.Add(ViewModel.CurrentConfigName);
-                ChangeConfigName(ViewModel.ConfigNames.First());
-                Configs.Instance.Save();
-            }
-        }
-
-        private async void AddConfigMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            string name = await CommonDialog.ShowInputDialogAsync("请输入配置名", "新配置");
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                if (Configs.Instance.ConfigCollection.ContainsKey(name))
-                {
-                    await CommonDialog.ShowErrorDialogAsync("该配置名已存在");
-                    return;
-                }
-                Configs.Instance.ConfigCollection.Add(name, new SingleConfig());
-                ViewModel.ConfigNames.Add(name);
-                ChangeConfigName(name);
-                Configs.Instance.Save();
-            }
-        }
     }
 
     public class MainWindowViewModel : INotifyPropertyChanged
     {
-        private string navigationViewHeader = "请使用异地磁盘完成这一步";
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public string NavigationViewHeader
-        {
-            get => navigationViewHeader;
-            set => this.SetValueAndNotify(ref navigationViewHeader, value, nameof(NavigationViewHeader));
-        }
+        public IList<string> configNames;
 
         private string currentConfigName = Configs.Instance.CurrentConfigName;
+
+        private string navigationViewHeader = "请使用异地磁盘完成这一步";
+
+        public MainWindowViewModel()
+        {
+            NotifyConfigNamesChanged();
+        }
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public IList<string> ConfigNames
+        {
+            get => configNames;
+            set => this.SetValueAndNotify(ref configNames, value, nameof(ConfigNames));
+        }
 
         public string CurrentConfigName
         {
@@ -212,7 +214,14 @@ namespace OffsiteBackupOfflineSync.UI
             set => this.SetValueAndNotify(ref currentConfigName, value, nameof(CurrentConfigName));
         }
 
-
-        public ObservableCollection<string> ConfigNames { get; set; } = new ObservableCollection<string>(Configs.Instance.ConfigCollection.Keys);
+        public string NavigationViewHeader
+        {
+            get => navigationViewHeader;
+            set => this.SetValueAndNotify(ref navigationViewHeader, value, nameof(NavigationViewHeader));
+        }
+        public void NotifyConfigNamesChanged()
+        {
+            ConfigNames = Configs.Instance.ConfigCollection.Keys.ToList();
+        }
     }
 }
