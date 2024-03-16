@@ -1,7 +1,5 @@
 ﻿using FzLib;
 using ModernWpf.FzExtension.CommonDialog;
-using OffsiteBackupOfflineSync.WPF.UI;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;

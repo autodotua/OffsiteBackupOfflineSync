@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 
-namespace OffsiteBackupOfflineSync.WPF.Converters
+namespace OffsiteBackupOfflineSync.Converters
 {
     public class SyncFilePathConverter : IValueConverter
     {

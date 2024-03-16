@@ -1,14 +1,16 @@
 ﻿using FzLib;
-using Microsoft.WindowsAPICodePack.FzExtension;
+using FzLib.WPF;
+using Microsoft.Win32;
 using ModernWpf.FzExtension.CommonDialog;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
-using OffsiteBackupOfflineSync.WPF.UI;
+using OffsiteBackupOfflineSync.Utils;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using CommonDialog = ModernWpf.FzExtension.CommonDialog.CommonDialog;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -65,7 +67,7 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void BrowsePatchDirButton_Click(object sender, RoutedEventArgs e)
         {
-            string path = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
+            string path = new OpenFolderDialog().GetPath(this.GetWindow());
             if (path != null)
             {
                 ViewModel.PatchDir = path;

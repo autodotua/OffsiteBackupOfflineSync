@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OffsiteBackupOfflineSync.WPF.UI
+namespace OffsiteBackupOfflineSync.UI
 {
     public static class PanelHelper
     {

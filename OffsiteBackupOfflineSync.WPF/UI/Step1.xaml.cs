@@ -1,16 +1,18 @@
 ﻿using FzLib;
 using FzLib.Collection;
-using Microsoft.WindowsAPICodePack.FzExtension;
+using FzLib.WPF;
+using Microsoft.Win32;
 using ModernWpf.FzExtension.CommonDialog;
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
-using OffsiteBackupOfflineSync.WPF.UI;
+using OffsiteBackupOfflineSync.Utils;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using CommonDialog = ModernWpf.FzExtension.CommonDialog.CommonDialog;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -26,34 +28,54 @@ namespace OffsiteBackupOfflineSync.UI
             ViewModel = viewModel;
             DataContext = ViewModel;
             InitializeComponent();
-            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
             PanelHelper.RegisterMessageAndProgressEvent(u, viewModel);
-            ViewModel.SearchingDirs = ViewModel.SearchingDirs;
         }
 
 
         public Step1ViewModel ViewModel { get; }
 
-        private void BrowseDirButton_Click(object sender, RoutedEventArgs e)
+        private async void BrowseDirButton_Click(object sender, RoutedEventArgs e)
         {
-            string path = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
-            if (path != null)
+            var dialog = new OpenFolderDialog();
+            dialog.Multiselect = true;
+            if (dialog.ShowDialog() == true)
             {
-                ViewModel.SearchingDir = path;
+                var paths = dialog.FolderNames;
+                if (paths.Length > 0)
+                {
+                    foreach (var path in paths)
+                    {
+                        try
+                        {
+                            ViewModel.AddSyncDir(path);
+                        }
+                        catch (Exception ex)
+                        {
+                            await CommonDialog.ShowErrorDialogAsync(ex.Message, null, "添加失败");
+                        }
+                    }
+                }
             }
         }
 
+
         private void BrowseOutputFileButton_Click(object sender, RoutedEventArgs e)
         {
+            GetObos1File();
+        }
+
+        private bool GetObos1File()
+        {
             string name = $"{DateTime.Now:yyyyMMdd}-备份";
-            string path = new FileFilterCollection().Add("异地备份快照", "obos1")
-               .CreateSaveFileDialog()
-               .SetDefault(name)
-               .GetFilePath();
+            var dialog = new SaveFileDialog().AddFilter("异地备份快照", "obos1");
+            dialog.FileName = name;
+            string path = dialog.GetPath(this.GetWindow());
             if (path != null)
             {
                 ViewModel.OutputFile = path;
+                return true;
             }
+            return false;
         }
 
         private async void ExportButton_Click(object sender, RoutedEventArgs e)
@@ -66,7 +88,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             foreach (var dir1 in dirs)
             {
-                foreach (var dir2 in dirs.Where(p=>p!=dir1))
+                foreach (var dir2 in dirs.Where(p => p != dir1))
                 {
                     if (dir1.StartsWith(dir2))
                     {
@@ -77,16 +99,7 @@ namespace OffsiteBackupOfflineSync.UI
             }
             if (string.IsNullOrWhiteSpace(ViewModel.OutputFile))
             {
-                string name = $"{DateTime.Now:yyyyMMdd}-备份";
-                string path = new FileFilterCollection().Add("异地备份快照", "obos1")
-                   .CreateSaveFileDialog()
-                   .SetDefault(name)
-                   .GetFilePath();
-                if (path != null)
-                {
-                    ViewModel.OutputFile = path;
-                }
-                else
+                if (!GetObos1File())
                 {
                     return;
                 }
@@ -116,52 +129,15 @@ namespace OffsiteBackupOfflineSync.UI
 
         }
 
-
         private void RemoveAllSyncDirsButton_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.SyncDirs.Clear();
-            lvwSearchingDirs.UnselectAll();
         }
 
         private void RemoveSelectedSyncDirsButton_Click(object sender, RoutedEventArgs e)
         {
             string dir = lvwSelectedDirs.SelectedItem as string;
             ViewModel.SyncDirs.Remove(dir);
-            lvwSearchingDirs.SelectedItems.Remove(dir);
-        }
-
-        private void SearchingDirList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (e.AddedItems.Count > 0)
-            {
-                foreach (string dir in e.AddedItems)
-                {
-                    if (!ViewModel.SyncDirs.Contains(dir))
-                    {
-                        ViewModel.SyncDirs.Add(dir);
-                    }
-                }
-            }
-            if (e.RemovedItems.Count > 0)
-            {
-                foreach (string dir in e.RemovedItems)
-                {
-                    if (ViewModel.SyncDirs.Contains(dir) && ViewModel.SearchingDirs.Contains(dir))
-                    {
-                        ViewModel.SyncDirs.Remove(dir);
-                    }
-                }
-            }
-        }
-
-        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
-        {
-            lvwSearchingDirs.SelectAll();
-        }
-
-        private void SelectNoneButton_Click(object sender, RoutedEventArgs e)
-        {
-            lvwSearchingDirs.UnselectAll();
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
@@ -170,17 +146,30 @@ namespace OffsiteBackupOfflineSync.UI
             u.Stop();
         }
 
-        private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        private async void InputDirButton_Click(object sender, RoutedEventArgs e)
         {
-            if (e.PropertyName == nameof(ViewModel.SearchingDirs))
+            var paths = await CommonDialog.ShowInputDialogAsync("请输入目录，一行一个", multiLines: true, maxLines: int.MaxValue);
+            if (paths != null)
             {
-                if (ViewModel.SearchingDirs.Count == 0)
+                foreach (var path in paths.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    return;
-                }
-                foreach (var dir in ViewModel.SearchingDirs.Where(p => ViewModel.SyncDirs.Contains(p)))
-                {
-                    lvwSearchingDirs.SelectedItems.Add(dir);
+                    if (string.IsNullOrWhiteSpace(path))
+                    {
+                        continue;
+                    }
+                    if (!Directory.Exists(path))
+                    {
+                        await CommonDialog.ShowErrorDialogAsync($"目录{path}不存在");
+                        continue;
+                    }
+                    try
+                    {
+                        ViewModel.AddSyncDir(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        await CommonDialog.ShowErrorDialogAsync(ex.Message,null, "添加失败");
+                    }
                 }
             }
         }
@@ -189,8 +178,6 @@ namespace OffsiteBackupOfflineSync.UI
     public class Step1ViewModel : ViewModelBase<FileBase>
     {
         private string outputFile;
-        private string searchingDir;
-        private List<string> searchingDirs = new List<string>();
         private ObservableCollection<string> selectedDirs = new ObservableCollection<string>();
 
         [JsonIgnore]
@@ -200,41 +187,57 @@ namespace OffsiteBackupOfflineSync.UI
             set => this.SetValueAndNotify(ref outputFile, value, nameof(OutputFile));
         }
 
-        public string SearchingDir
-        {
-            get => searchingDir;
-            set
-            {
-                this.SetValueAndNotify(ref searchingDir, value, nameof(SearchingDir));
-                if (Directory.Exists(value))
-                {
-                    SearchingDirs = Directory.EnumerateDirectories(value)
-                        .Where(p => !p.EndsWith("System Volume Information"))
-                        .Where(p => !p.Contains('$'))
-                        .Where(p => !SyncDirs.Contains(p))
-                        .ToList();
-                }
-                else if(string.IsNullOrEmpty(value))
-                {
-                    SearchingDirs= DriveInfo.GetDrives().Select(p=>p.RootDirectory.FullName).ToList();
-                }
-                else
-                {
-                    SearchingDirs = new List<string>();
-                }
-            }
-        }
-        [JsonIgnore]
-        public List<string> SearchingDirs
-        {
-            get => searchingDirs;
-            set => this.SetValueAndNotify(ref searchingDirs, value, nameof(SearchingDirs));
-        }
-
         public ObservableCollection<string> SyncDirs
         {
             get => selectedDirs;
             set => this.SetValueAndNotify(ref selectedDirs, value, nameof(SyncDirs));
+        }
+
+        public void AddSyncDir(string path)
+        {
+            DirectoryInfo newDirInfo = new DirectoryInfo(path);
+
+            // 检查新目录与现有目录是否相同
+            foreach (string existingPath in SyncDirs)
+            {
+                DirectoryInfo existingDirInfo = new DirectoryInfo(existingPath);
+
+                if (existingDirInfo.FullName.Equals(newDirInfo.FullName, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"目录 '{path}' 已经存在，不能重复添加。");
+                }
+            }
+
+            // 检查新目录是否是现有目录的子目录或父目录
+            foreach (string existingPath in SyncDirs)
+            {
+                DirectoryInfo existingDirInfo = new DirectoryInfo(existingPath);
+
+                // 检查新目录是否是现有目录的子目录
+                DirectoryInfo temp = newDirInfo;
+                while (temp.Parent != null)
+                {
+                    if (temp.Parent.FullName.Equals(existingDirInfo.FullName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"新目录 '{path}' 是现有目录 '{existingPath}' 的子目录，不能添加。");
+                    }
+                    temp = temp.Parent;
+                }
+
+                // 检查新目录是否是现有目录的父目录
+                temp = existingDirInfo;
+                while (temp.Parent != null)
+                {
+                    if (temp.Parent.FullName.Equals(newDirInfo.FullName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"新目录 '{path}' 是现有目录 '{existingPath}' 的父目录，不能添加。");
+                    }
+                    temp = temp.Parent;
+                }
+            }
+
+            SyncDirs.Add(path);
+
         }
     }
 }

@@ -1,16 +1,18 @@
 ﻿using FzLib;
-using Microsoft.WindowsAPICodePack.FzExtension;
+using FzLib.WPF;
+using Microsoft.Win32;
 using ModernWpf.FzExtension.CommonDialog;
 using Newtonsoft.Json;
 using OffsiteBackupOfflineSync.Model;
 using OffsiteBackupOfflineSync.Utility;
-using OffsiteBackupOfflineSync.WPF.UI;
+using OffsiteBackupOfflineSync.Utils;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using CommonDialog = ModernWpf.FzExtension.CommonDialog.CommonDialog;
 
 namespace OffsiteBackupOfflineSync.UI
 {
@@ -36,12 +38,11 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void BrowseLocalDirButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new FileFilterCollection().CreateOpenFileDialog();
+            var dialog = new OpenFolderDialog();
             dialog.Multiselect = true;
-            dialog.IsFolderPicker = true;
-            if (dialog.ShowDialog() == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok)
+            if (dialog.ShowDialog() == true)
             {
-                string path = string.Join(Environment.NewLine, dialog.FileNames);
+                string path = string.Join(Environment.NewLine, dialog.FolderNames);
                 if (string.IsNullOrEmpty(ViewModel.LocalDir))
                 {
                     ViewModel.LocalDir = path;
@@ -55,7 +56,7 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void BrowseOffsiteSnapshotButton_Click(object sender, RoutedEventArgs e)
         {
-            string path = new FileFilterCollection().Add("异地备份快照", "obos1").CreateOpenFileDialog().GetFilePath();
+            string path = new OpenFileDialog().AddFilter("异地备份快照", "obos1").GetPath(this.GetWindow());
             if (path != null)
             {
                 ViewModel.OffsiteSnapshot = path;
@@ -64,7 +65,7 @@ namespace OffsiteBackupOfflineSync.UI
 
         private void BrowsePatchDirButton_Click(object sender, RoutedEventArgs e)
         {
-            var outputDir = new FileFilterCollection().CreateOpenFileDialog().GetFolderPath();
+            var outputDir = new OpenFolderDialog().GetPath(this.GetWindow());
             if (outputDir != null)
             {
                 ViewModel.PatchDir = outputDir;

@@ -1,10 +1,12 @@
-﻿using Microsoft.WindowsAPICodePack.Dialogs;
-using Microsoft.WindowsAPICodePack.FzExtension;
+﻿using FzLib.WPF;
+using Microsoft.Win32;
 using ModernWpf.FzExtension.CommonDialog;
 using OffsiteBackupOfflineSync.Utility;
+using OffsiteBackupOfflineSync.Utils;
 using System.Windows.Controls;
+using CommonDialog = ModernWpf.FzExtension.CommonDialog.CommonDialog;
 
-namespace OffsiteBackupOfflineSync.WPF.UI
+namespace OffsiteBackupOfflineSync.UI
 {
     /// <summary>
     /// AboutPage.xaml 的交互逻辑
@@ -33,7 +35,7 @@ namespace OffsiteBackupOfflineSync.WPF.UI
 
         private async void GenerateTestFilesButton_Click(object sender, System.Windows.RoutedEventArgs e)
         {
-            string path = new CommonOpenFileDialog().GetFolderPath();
+            string path = new OpenFolderDialog().GetPath(this.GetWindow());
             if (path != null)
             {
                 IsEnabled = false;

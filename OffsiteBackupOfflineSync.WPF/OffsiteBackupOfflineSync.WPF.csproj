@@ -2,19 +2,19 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows7.0</TargetFramework>
     <Nullable>disable</Nullable>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>../res/icon.ico</ApplicationIcon>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".WPF",""))</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="11.0.1" />
-    <PackageReference Include="Mapster" Version="7.3.0" />
-    <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.4" />
+    <PackageReference Include="Mapster" Version="7.4.0" />
     <PackageReference Include="ModernWpfUI" Version="0.9.6" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,9 +30,6 @@
     </Reference>
     <Reference Include="ModernWpf.FzExtension">
       <HintPath>..\libs\ModernWpf.FzExtension.dll</HintPath>
-    </Reference>
-    <Reference Include="WindowsAPICodePack.FzExtension">
-      <HintPath>..\libs\WindowsAPICodePack.FzExtension.dll</HintPath>
     </Reference>
   </ItemGroup>
 
