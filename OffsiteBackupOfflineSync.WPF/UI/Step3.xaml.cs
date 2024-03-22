@@ -101,7 +101,7 @@ namespace OffsiteBackupOfflineSync.UI
                     u.AnalyzeEmptyDirectories();
                 });
 
-                if (u.DeletingDirectories.Any())
+                if (u.DeletingDirectories.Count != 0)
                 {
                     if (await CommonDialog.ShowYesNoDialogAsync("删除空目录",
                         $"有{u.DeletingDirectories.Count}个已不存在于本地的空目录，是否删除？",

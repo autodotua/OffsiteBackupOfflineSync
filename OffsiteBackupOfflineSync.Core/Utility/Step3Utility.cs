@@ -172,6 +172,11 @@ namespace OffsiteBackupOfflineSync.Utility
                         {
                             deletingDirsInThisTopDir.Add(offsiteSubDir);
                         }
+                        else if (!Directory.EnumerateFiles(offsiteSubDir).Skip(1).Any() //目录里只有缩略图
+                            && Path.GetFileName(Directory.EnumerateFiles(offsiteSubDir).First()).ToLower() == "thumbs.db")
+                        {
+                            deletingDirsInThisTopDir.Add(offsiteSubDir);
+                        }
                     }
                 }
 
@@ -180,7 +185,7 @@ namespace OffsiteBackupOfflineSync.Utility
                 //通过两层循环，删除位于空目录下的空目录
                 foreach (var dir1 in deletingDirsInThisTopDir.ToList())//外层循环，dir1为内层空目录
                 {
-                    foreach (var dir2 in deletingDirsInThisTopDir)//内存循环，dir2为外层空目录
+                    foreach (var dir2 in deletingDirsInThisTopDir)//内曾循环，dir2为外层空目录
                     {
                         if (dir1 == dir2)
                         {
@@ -210,7 +215,9 @@ namespace OffsiteBackupOfflineSync.Utility
         {
             stopping = false;
             var updateFiles = UpdateFiles.Where(p => p.Checked).ToList();
-            long totalLength = updateFiles.Where(p => p.UpdateType != FileUpdateType.Delete).Sum(p => p.Length);
+            long totalLength = updateFiles
+                .Where(p => p.UpdateType is not (FileUpdateType.Delete or FileUpdateType.Move))
+                .Sum(p => p.Length);
             long length = 0;
 
             InvokeProgressReceivedEvent(0, totalLength);
@@ -321,7 +328,7 @@ namespace OffsiteBackupOfflineSync.Utility
                     break;
                 case DeleteMode.MoveToDeletedFolder:
                     string relative = Path.GetRelativePath(rootDir, filePath);
-                    string deletedFolder = Path.Combine(Path.GetPathRoot(filePath), deleteDirName, createTime.ToString("yyyyMMdd-HHmmss"), rootDir.Replace(":\\","#").Replace('\\','#').Replace('/','#'));
+                    string deletedFolder = Path.Combine(Path.GetPathRoot(filePath), deleteDirName, createTime.ToString("yyyyMMdd-HHmmss"), rootDir.Replace(":\\", "#").Replace('\\', '#').Replace('/', '#'));
                     string target = Path.Combine(deletedFolder, relative);
                     string dir = Path.GetDirectoryName(target);
                     if (!Directory.Exists(dir))

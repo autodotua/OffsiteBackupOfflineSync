@@ -46,10 +46,10 @@ namespace OffsiteBackupOfflineSync.Utility
                     Step2Utility u2 = new Step2Utility();
                     u2.Search(match, s1m, $"黑名单文件.+{Environment.NewLine}黑名单目录/", true, 2, false);
                     Debug.Assert(u2.UpdateFiles != null);
-                    Debug.Assert(u2.UpdateFiles.Count == Count*8);
-                    Debug.Assert(!u2.UpdateFiles.Any(p=>p.Name.Contains('黑')));
+                    Debug.Assert(u2.UpdateFiles.Count == Count * 8);
+                    Debug.Assert(!u2.UpdateFiles.Any(p => p.Name.Contains('黑')));
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("新建")).All(p => p.UpdateType == FileUpdateType.Add));
-                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("新建")).Count() == Count*2);
+                    Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("新建")).Count() == Count * 2);
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("删除")).All(p => p.UpdateType == FileUpdateType.Delete));
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("删除")).Count() == Count * 2);
                     Debug.Assert(u2.UpdateFiles.Where(p => p.Name.Contains("移动")).All(p => p.UpdateType == FileUpdateType.Move));
@@ -64,12 +64,12 @@ namespace OffsiteBackupOfflineSync.Utility
                     u3.Analyze(patchDir);
                     u3.Update(DeleteMode.Delete, null);
                     u3.AnalyzeEmptyDirectories();
-                    u3.DeleteEmptyDirectories(DeleteMode.Delete,null);
+                    u3.DeleteEmptyDirectories(DeleteMode.Delete, null);
 
                     var localFiles = Directory.EnumerateFiles(localDir, "*", SearchOption.AllDirectories)
                         .Select(p => Path.GetRelativePath(localDir, p))
                         .Where(p => !p.Contains("黑"))
-                        .OrderBy(p=>p)
+                        .OrderBy(p => p)
                         .ToList();
                     var remoteFiles = Directory.EnumerateFiles(remoteDir, "*", SearchOption.AllDirectories)
                         .Select(p => Path.GetRelativePath(remoteDir, p))
@@ -79,24 +79,24 @@ namespace OffsiteBackupOfflineSync.Utility
 
                     Debug.Assert(localFiles.SequenceEqual(remoteFiles));
 
-                     localFiles = Directory.EnumerateFiles(localDir, "*", SearchOption.AllDirectories)
+                    localFiles = Directory.EnumerateFiles(localDir, "*", SearchOption.AllDirectories)
+                       .Select(p => Path.GetRelativePath(localDir, p))
+                       .Where(p => p.Contains("黑"))
+                       .OrderBy(p => p)
+                       .ToList();
+                    remoteFiles = Directory.EnumerateFiles(remoteDir, "*", SearchOption.AllDirectories)
+                       .Select(p => Path.GetRelativePath(remoteDir, p))
+                       .Where(p => p.Contains("黑"))
+                       .OrderBy(p => p)
+                       .ToList();
+
+                    Debug.Assert(localFiles.Count == remoteFiles.Count);
+
+                    var localDirs = Directory.EnumerateDirectories(localDir, "*", SearchOption.AllDirectories)
                         .Select(p => Path.GetRelativePath(localDir, p))
-                        .Where(p => p.Contains("黑"))
-                        .OrderBy(p=>p)
-                        .ToList();
-                     remoteFiles = Directory.EnumerateFiles(remoteDir, "*", SearchOption.AllDirectories)
-                        .Select(p => Path.GetRelativePath(remoteDir, p))
-                        .Where(p => p.Contains("黑"))
                         .OrderBy(p => p)
                         .ToList();
-
-                    Debug.Assert(localFiles.Count==remoteFiles.Count);
-
-                    var localDirs=Directory.EnumerateDirectories(localDir,"*", SearchOption.AllDirectories)
-                        .Select(p => Path.GetRelativePath(localDir, p))
-                        .OrderBy(p => p)
-                        .ToList();
-                    var remoteDirs=Directory.EnumerateDirectories(remoteDir,"*", SearchOption.AllDirectories)
+                    var remoteDirs = Directory.EnumerateDirectories(remoteDir, "*", SearchOption.AllDirectories)
                         .Select(p => Path.GetRelativePath(remoteDir, p))
                         .OrderBy(p => p)
                         .ToList();
@@ -206,8 +206,10 @@ namespace OffsiteBackupOfflineSync.Utility
             }
             remoteDir.CreateSubdirectory("空目录1");
             localDir.CreateSubdirectory("空目录1");
-            remoteDir.CreateSubdirectory("空目录2").CreateSubdirectory("子空目录3");
-
+            var emptyDir2 = remoteDir.CreateSubdirectory("空目录2");
+            emptyDir2.CreateSubdirectory("子空目录3");
+            var emptyDir4 = emptyDir2.CreateSubdirectory("子空目录4（带缩略图数据库）");
+            File.WriteAllText(Path.Combine(emptyDir4.FullName, "Thumb.db"), "");
         }
     }
 }
